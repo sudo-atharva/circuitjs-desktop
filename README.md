@@ -74,11 +74,31 @@ simulation **time step**, not the screen. Measured with a 1 V sine at the defaul
 
 Off by default. Turn it on in **Options → Enable MCP Server (AI control)**. While on, any program on this PC can
 drive the simulator through `http://127.0.0.1:7432/mcp` (not reachable from other machines; change the port with
-the `CIRCUITJS_MCP_PORT` environment variable). Add it to Claude Code with:
+the `CIRCUITJS_MCP_PORT` environment variable).
+
+**Claude Code**, all projects:
 
 ```
-claude mcp add --transport http circuitjs http://127.0.0.1:7432/mcp
+claude mcp add --transport http --scope user circuitjs http://127.0.0.1:7432/mcp
 ```
+
+**Claude Desktop**: Settings → Developer → Edit Config, add the entry below, then quit Claude from the tray and
+reopen it. `--mcp-stdio` runs a small bridge to the running app, so no Node.js is needed. Use the path of your
+`circuitjs.exe` (the installer puts it in `%LOCALAPPDATA%\CircuitJS` by default), with `\\` in JSON:
+
+```json
+{
+  "mcpServers": {
+    "circuitjs": {
+      "command": "C:\\Users\\YOU\\AppData\\Local\\CircuitJS\\circuitjs.exe",
+      "args": ["--mcp-stdio"]
+    }
+  }
+}
+```
+
+Claude Desktop connects even while CircuitJS is closed. Tool calls then return "CircuitJS is not running" until
+you start the app and turn on the MCP option.
 
 Tools: `list_examples`, `load_example`, `get_circuit`, `load_circuit`, `list_elements`,
 `simulate` (transient run with probes; returns min/max/avg/rms/frequency and a resampled waveform),

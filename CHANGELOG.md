@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### New
+- `circuitjs.exe --mcp-stdio`: stdio MCP bridge, so Claude Desktop can use CircuitJS without Node.js.
+
 ## 1.0.0
 
 First release of CircuitJS Desktop, a Windows edition of the CircuitJS1 circuit simulator.

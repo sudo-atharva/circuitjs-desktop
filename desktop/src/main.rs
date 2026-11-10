@@ -16,7 +16,11 @@ fn read(p: &Path) -> Result<(String, String), String> {
 
 #[tauri::command]
 async fn save_dialog(ext: String) -> Option<String> {
-    let name = if ext == "csim" { "CircuitJS circuit" } else { "File" };
+    let name = if ext == "csim" {
+        "CircuitJS circuit"
+    } else {
+        "File"
+    };
     rfd::FileDialog::new()
         .add_filter(name, &[ext.as_str()])
         .save_file()
@@ -59,6 +63,9 @@ fn toggle_devtools(w: WebviewWindow) {
 }
 
 fn main() {
+    if std::env::args().nth(1).as_deref() == Some("--mcp-stdio") {
+        return mcp::stdio_bridge();
+    }
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             save_dialog,

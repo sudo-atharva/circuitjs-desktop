@@ -20,10 +20,7 @@ static STARTED: AtomicBool = AtomicBool::new(false);
 pub fn mcp_set_enabled(app: AppHandle, enabled: bool) -> Result<(), String> {
     ENABLED.store(enabled, Ordering::Relaxed);
     if enabled && !STARTED.swap(true, Ordering::Relaxed) {
-        let port = std::env::var("CIRCUITJS_MCP_PORT")
-            .ok()
-            .and_then(|p| p.parse().ok())
-            .unwrap_or(7432);
+        let port = port();
         if let Err(e) = start(app, port) {
             STARTED.store(false, Ordering::Relaxed);
             ENABLED.store(false, Ordering::Relaxed);
@@ -31,6 +28,13 @@ pub fn mcp_set_enabled(app: AppHandle, enabled: bool) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+fn port() -> u16 {
+    std::env::var("CIRCUITJS_MCP_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(7432)
 }
 
 #[derive(Default)]
@@ -92,7 +96,10 @@ fn respond(req: tiny_http::Request, status: u16, body: Option<Value>) {
     let mut r = tiny_http::Response::from_string(body.map(|b| b.to_string()).unwrap_or_default())
         .with_status_code(status);
     if status == 200 {
-        r.add_header(tiny_http::Header::from_bytes("Content-Type", "application/json; charset=utf-8").unwrap());
+        r.add_header(
+            tiny_http::Header::from_bytes("Content-Type", "application/json; charset=utf-8")
+                .unwrap(),
+        );
     }
     let _ = req.respond(r);
 }
@@ -124,9 +131,15 @@ fn handle(app: &AppHandle, mut req: tiny_http::Request) {
         let err = json!({"jsonrpc": "2.0", "id": null, "error": {"code": -32700, "message": "parse error"}});
         return respond(req, 200, Some(err));
     };
-    let Some(id) = msg.get("id").cloned() else {
-        return respond(req, 202, None); // notification
-    };
+    match answer(&msg, |tool, args| call_page(app, tool, args)) {
+        Some(out) => respond(req, 200, Some(out)),
+        None => respond(req, 202, None), // notification
+    }
+}
+
+/// JSON-RPC reply to one MCP message, None for notifications. `call` runs a tool.
+fn answer(msg: &Value, call: impl FnOnce(&str, &Value) -> Reply) -> Option<Value> {
+    let id = msg.get("id")?.clone();
     let params = &msg["params"];
     let result = match msg["method"].as_str().unwrap_or("") {
         "initialize" => Ok(json!({
@@ -138,28 +151,91 @@ fn handle(app: &AppHandle, mut req: tiny_http::Request) {
         "ping" => Ok(json!({})),
         "tools/list" => Ok(json!({"tools": tools()})),
         "tools/call" => Ok(
-            match call_page(app, params["name"].as_str().unwrap_or(""), &params["arguments"]) {
+            match call(params["name"].as_str().unwrap_or(""), &params["arguments"]) {
                 Ok(text) => json!({"content": [{"type": "text", "text": text}]}),
                 Err(e) => json!({"content": [{"type": "text", "text": e}], "isError": true}),
             },
         ),
         m => Err(json!({"code": -32601, "message": format!("method not found: {m}")})),
     };
-    let out = match result {
+    Some(match result {
         Ok(r) => json!({"jsonrpc": "2.0", "id": id, "result": r}),
         Err(e) => json!({"jsonrpc": "2.0", "id": id, "error": e}),
-    };
-    respond(req, 200, Some(out));
+    })
+}
+
+/// `circuitjs.exe --mcp-stdio`: stdio MCP server for clients that launch servers themselves
+/// (Claude Desktop). Answers handshake and tool list itself, so it connects even while the app
+/// is closed; tool calls go to the running app's HTTP server.
+pub fn stdio_bridge() {
+    use std::io::{BufRead, Write};
+    for line in std::io::stdin().lock().lines() {
+        let Ok(line) = line else { break };
+        let Ok(msg) = serde_json::from_str::<Value>(&line) else {
+            continue;
+        };
+        // own thread per message: a long simulate() must not block ping etc.
+        std::thread::spawn(move || {
+            let out = if msg["method"] == "tools/call" {
+                // pass the app's reply through; if the app is off, a tool error the model can read
+                Some(
+                    forward(&line)
+                        .unwrap_or_else(|e| answer(&msg, |_, _| Err(e)).unwrap().to_string()),
+                )
+            } else {
+                answer(&msg, |_, _| unreachable!()).map(|v| v.to_string())
+            };
+            if let Some(out) = out {
+                let mut so = std::io::stdout().lock();
+                let _ = writeln!(so, "{}", out.trim_end());
+                let _ = so.flush();
+            }
+        });
+    }
+}
+
+/// POST one JSON-RPC message to the running app and return its raw reply body.
+fn forward(body: &str) -> Reply {
+    use std::io::{Read, Write};
+    let port = port();
+    let mut s = std::net::TcpStream::connect(("127.0.0.1", port)).map_err(|_| {
+        "CircuitJS is not running. Start it and turn on Options > Enable MCP Server.".to_string()
+    })?;
+    write!(
+        s,
+        "POST /mcp HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nContent-Type: application/json\r\n\
+         Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        body.len()
+    )
+    .map_err(|e| e.to_string())?;
+    let mut resp = String::new();
+    s.read_to_string(&mut resp).map_err(|e| e.to_string())?;
+    let (head, body) = resp
+        .split_once("\r\n\r\n")
+        .ok_or("bad reply from CircuitJS")?;
+    match head.split(' ').nth(1) {
+        Some("200") => Ok(body.to_string()),
+        Some("403") => {
+            Err("The MCP server is off in CircuitJS. Turn on Options > Enable MCP Server.".into())
+        }
+        code => Err(format!("CircuitJS replied HTTP {}", code.unwrap_or("?"))),
+    }
 }
 
 fn call_page(app: &AppHandle, tool: &str, args: &Value) -> Reply {
     static NEXT: AtomicU64 = AtomicU64::new(1);
     let id = NEXT.fetch_add(1, Ordering::Relaxed);
-    let win = app.get_webview_window("main").ok_or("CircuitJS window is closed")?;
+    let win = app
+        .get_webview_window("main")
+        .ok_or("CircuitJS window is closed")?;
     let (tx, rx) = mpsc::channel();
     let pending = app.state::<Pending>();
     pending.0.lock().unwrap().insert(id, tx);
-    let args = if args.is_null() { json!({}) } else { args.clone() };
+    let args = if args.is_null() {
+        json!({})
+    } else {
+        args.clone()
+    };
     let js = format!("window.__mcp({id}, {}, {})", json!(tool), args);
     let reply = match win.eval(&js) {
         Ok(()) => rx
