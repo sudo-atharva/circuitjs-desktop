@@ -47,7 +47,42 @@ may warn the first time: click *More info → Run anyway*.
 
 ![Everyday Circuits menu](docs/everyday-menu.png)
 
-![Datasheet export](docs/datasheet.png)
+## Datasheet / PDF export
+
+Turn any simulation into a datasheet-style PDF, like a part datasheet from a chip maker.
+
+1. Put probes on the nodes you care about (press `h`, click a wire) and run the circuit.
+2. Optional: open the Waveform Viewer and zoom to the time range to measure.
+3. **File → Export Datasheet (PDF)...** (or *Datasheet / PDF* in the Waveform Viewer).
+4. Click any text to edit it: title, subtitle, doc number, revision, author, description, figure captions.
+   *Logo...* adds your logo; author and logo are remembered.
+5. **Save as PDF / Print** and pick *Microsoft Print to PDF*.
+
+The editor before saving:
+
+![Datasheet editor](docs/datasheet.png)
+
+The PDF it produces (555 LED blinker example, A4, 3 pages). Download the full sample:
+[sample-datasheet-555.pdf](docs/sample-datasheet-555.pdf)
+
+| Page 1: title block, schematic, electrical characteristics | Page 2: waveforms, BOM, conditions | Page 3: circuit file appendix |
+|---|---|---|
+| ![Page 1](docs/datasheet-page1.png) | ![Page 2](docs/datasheet-page2.png) | ![Page 3](docs/datasheet-page3.png) |
+
+What's in it:
+
+| Section | Contents |
+|---|---|
+| Title block | Circuit name, subtitle, doc no., revision, date, author, optional logo |
+| 1 Description | Taken from the text labels in the circuit |
+| 2 Schematic | Black-and-white circuit drawing |
+| 3 Electrical Characteristics | Per probe: voltage / current min, typ, max, peak-to-peak, RMS, frequency, period, duty cycle |
+| 4 Typical Waveforms | One figure per probe |
+| 5 Bill of Materials | Parts grouped by value with quantity |
+| 6 Simulation Conditions | Time step, simulated time, element count, samples |
+| Appendix A | The circuit file, to reproduce the simulation (can be turned off) |
+
+Every page has a header (doc no. and revision) and a footer (title and "Page X of Y").
 
 ## Quick start
 
