@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0
 
 ### New
 - `circuitjs.exe --mcp-stdio`: stdio MCP bridge, so Claude Desktop can use CircuitJS without Node.js.

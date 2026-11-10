@@ -13,7 +13,7 @@ small native app (Rust + Tauri, ~7 MB) with a big waveform viewer and other addi
 
 Get the latest release from the [Releases page](https://github.com/sudo-atharva/circuitjs-desktop/releases):
 
-- `CircuitJS_1.0.0_x64-setup.exe`: installer (per user, no admin needed). Registers `.csim` files so they open on double-click.
+- `CircuitJS_1.1.0_x64-setup.exe`: installer (per user, no admin needed). Registers `.csim` files so they open on double-click.
 - `circuitjs.exe`: portable, no install.
 
 Needs Windows 10 or 11 (uses the built-in WebView2). The app is not code-signed yet, so Windows SmartScreen
@@ -36,7 +36,8 @@ may warn the first time: click *More info → Run anyway*.
 - **Everyday Circuits** menu: LED + resistor, transistor switch, bridge rectifier, zener and 7805-style
   regulators, 555 blinker, PWM filter, op-amp amplifier (also in [examples/](examples/)).
 - **Scope frequency readout fixed**: small scopes now show the frequency of slow and compressed signals too.
-- **MCP server (optional)** so AI assistants such as Claude can build and simulate circuits (see below).
+- **MCP server (optional)** so AI assistants such as Claude Code and Claude Desktop can build and simulate
+  circuits (see below). Claude Desktop launches it directly with `circuitjs.exe --mcp-stdio`, no Node.js needed.
 
 ![Everyday Circuits menu](docs/everyday-menu.png)
 
@@ -97,13 +98,18 @@ reopen it. `--mcp-stdio` runs a small bridge to the running app, so no Node.js i
 }
 ```
 
+The config file is `%APPDATA%\Claude\claude_desktop_config.json`, or for the Microsoft Store version of Claude
+`%LOCALAPPDATA%\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude\claude_desktop_config.json`
+(Edit Config opens the right one).
+
 Claude Desktop connects even while CircuitJS is closed. Tool calls then return "CircuitJS is not running" until
 you start the app and turn on the MCP option.
 
 Tools: `list_examples`, `load_example`, `get_circuit`, `load_circuit`, `list_elements`,
 `simulate` (transient run with probes; returns min/max/avg/rms/frequency and a resampled waveform),
-`set_running`. Simulations requested over MCP run at full CPU speed. Keep the app window open (not minimized):
-Windows slows down hidden pages.
+`set_running`. Simulations requested over MCP run at full CPU speed and pause the circuit at the stop time so the
+plots stay frozen; press Run/Stop or ask the AI to resume. Keep the app window open (not minimized): Windows slows
+down hidden pages.
 
 ## Known limitations
 
