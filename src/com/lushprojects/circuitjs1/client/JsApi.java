@@ -44,6 +44,27 @@ class JsApi {
 
     static String error() { return CirSim.theSim.stopMessage; }
 
+    // for the datasheet (report.html)
+    // black-and-white schematic (no voltage colors), like a printed datasheet
+    static String image() {
+	CirSim sim = CirSim.theSim;
+	boolean volts = sim.voltsCheckItem.getState();
+	sim.voltsCheckItem.setState(false);
+	String url = sim.getCircuitAsCanvas(true).toDataUrl();
+	sim.voltsCheckItem.setState(volts);
+	return url;
+    }
+
+    static String title() { return CirSim.theSim.titleLabel.getText(); }
+
+    static double timeStep() { return CirSim.theSim.maxTimeStep; }
+
+    static native void openReport() /*-{
+	var w = $wnd.reportWin;
+	if (w && !w.closed) { w.focus(); w.location.reload(); return; }
+	$wnd.reportWin = $wnd.open("report.html", "report", "width=900,height=1000");
+    }-*/;
+
     static native void export() /*-{
 	$wnd.circuitjsApi = {
 	    count: $entry(function () { return @com.lushprojects.circuitjs1.client.JsApi::count()(); }),
@@ -60,7 +81,11 @@ class JsApi {
 	    setRunning: $entry(function (b) { @com.lushprojects.circuitjs1.client.JsApi::setRunning(Z)(b); }),
 	    time: $entry(function () { return @com.lushprojects.circuitjs1.client.JsApi::time()(); }),
 	    setTurbo: $entry(function (b) { @com.lushprojects.circuitjs1.client.JsApi::turbo = b; }),
-	    error: $entry(function () { return @com.lushprojects.circuitjs1.client.JsApi::error()(); })
+	    error: $entry(function () { return @com.lushprojects.circuitjs1.client.JsApi::error()(); }),
+	    image: $entry(function () { return @com.lushprojects.circuitjs1.client.JsApi::image()(); }),
+	    title: $entry(function () { return @com.lushprojects.circuitjs1.client.JsApi::title()(); }),
+	    timeStep: $entry(function () { return @com.lushprojects.circuitjs1.client.JsApi::timeStep()(); }),
+	    openReport: $entry(function () { @com.lushprojects.circuitjs1.client.JsApi::openReport()(); })
 	};
     }-*/;
 }

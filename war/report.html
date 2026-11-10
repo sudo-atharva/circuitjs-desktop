@@ -1,0 +1,319 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Datasheet</title>
+<style id="pagestyle"></style>
+<style>
+  :root { --ink: #1a1a1a; --muted: #5b6270; --accent: #0b3d91; --rule: #c9ced8; --zebra: #f3f5f9; }
+  * { box-sizing: border-box; }
+  html { background: #6b7280; }
+  body { margin: 0; color: var(--ink); font: 9.5pt/1.4 "Segoe UI", Arial, sans-serif; }
+  #tools { position: sticky; top: 0; z-index: 2; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+           padding: 8px 12px; background: #1f2937; color: #e5e7eb; font: 13px system-ui, sans-serif; }
+  #tools button, #tools label.btn { background: #374151; color: #f9fafb; border: 1px solid #4b5563; border-radius: 4px;
+           padding: 4px 10px; font: inherit; cursor: pointer; }
+  #tools button.primary { background: #2563eb; border-color: #2563eb; }
+  #tools .hint { margin-left: auto; color: #9ca3af; font-size: 12px; }
+  .page { width: 210mm; min-height: 297mm; margin: 16px auto; padding: 14mm; background: #fff;
+          box-shadow: 0 2px 12px rgba(0,0,0,.35); }
+
+  /* title block */
+  header { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center;
+           border-bottom: 3px solid var(--accent); padding-bottom: 8px; }
+  #logo { max-height: 18mm; max-width: 45mm; display: block; }
+  #logobox:empty, #logobox.none { display: none; }
+  h1 { margin: 0; font-size: 20pt; line-height: 1.15; color: var(--accent); }
+  #subtitle { margin: 2px 0 0; font-size: 11pt; color: var(--muted); }
+  table.doc { border-collapse: collapse; font-size: 8.5pt; justify-self: end; }
+  table.doc th { text-align: left; color: var(--muted); font-weight: 600; padding: 1px 8px 1px 0; }
+  table.doc th { width: 1%; white-space: nowrap; }
+  table.doc td { padding: 1px 0; min-width: 30mm; }
+
+  h2 { font-size: 11pt; color: #fff; background: var(--accent); margin: 16px 0 8px; padding: 3px 8px;
+       break-after: avoid; }
+  section { break-inside: auto; }
+  #desc { white-space: pre-wrap; min-height: 1.4em; }
+  figure { margin: 0; break-inside: avoid; }
+  figcaption { font-size: 8.5pt; color: var(--muted); text-align: center; margin-top: 3px; }
+  #schem { display: block; max-width: 100%; max-height: 120mm; margin: 0 auto; border: 1px solid var(--rule); }
+  .figs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+  .figs canvas { width: 100%; height: 55mm; display: block; border: 1px solid var(--rule); }
+  .cond { margin: 0 0 6px; color: var(--muted); font-size: 8.5pt; }
+
+  table.grid { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+  table.grid th { background: #e3e8f2; text-align: left; padding: 3px 6px; border-bottom: 1.5px solid var(--accent); }
+  table.grid td { padding: 2.5px 6px; border-bottom: 1px solid var(--rule); }
+  table.grid tbody tr:nth-child(even) td { background: var(--zebra); }
+  table.grid td.num, table.grid th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.grid tr.group td { background: #fff !important; font-weight: 600; color: var(--accent); padding-top: 6px; }
+  table.grid tr { break-inside: avoid; }
+  .empty { color: var(--muted); font-style: italic; }
+  pre#dump { font: 7.5pt/1.3 Consolas, monospace; white-space: pre-wrap; word-break: break-all;
+             background: var(--zebra); padding: 6px; margin: 0; }
+  [contenteditable]:hover { outline: 1px dashed #93c5fd; }
+  [contenteditable]:focus { outline: 1px solid #2563eb; }
+  footer.note { margin-top: 18px; padding-top: 6px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 7.5pt; }
+
+  @media print {
+    html { background: none; }
+    #tools { display: none; }
+    .page { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
+    [contenteditable]:hover, [contenteditable]:focus { outline: none; }
+    body.noappendix #appendix { display: none; }
+    #appendix { break-before: page; }
+    h2, table.grid th, table.grid td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+  body.noappendix #appendix { opacity: .35; }
+</style>
+</head>
+<body>
+<div id="tools">
+  <button class="primary" id="print" title="Opens the print dialog: choose &quot;Save as PDF&quot; or &quot;Microsoft Print to PDF&quot;">Save as PDF / Print</button>
+  <button id="refresh" title="Reload schematic, waveforms and measurements from CircuitJS (keeps your edits to the text)">Refresh data</button>
+  <label class="btn" title="Optional logo for the title block">Logo… <input id="logofile" type="file" accept="image/*" hidden></label>
+  <button id="nologo">No logo</button>
+  <label><input id="appx" type="checkbox" checked> Circuit file appendix</label>
+  <span class="hint">Click any text to edit it.</span>
+</div>
+
+<main class="page">
+  <header>
+    <div id="logobox" class="none"><img id="logo" alt=""></div>
+    <div>
+      <h1 id="title" contenteditable></h1>
+      <p id="subtitle" contenteditable>Circuit simulation datasheet</p>
+    </div>
+    <table class="doc">
+      <tr><th>Doc No.</th><td id="docno" contenteditable>CJS-0001</td></tr>
+      <tr><th>Revision</th><td id="rev" contenteditable>A</td></tr>
+      <tr><th>Date</th><td id="date" contenteditable></td></tr>
+      <tr><th>Author</th><td id="author" contenteditable></td></tr>
+    </table>
+  </header>
+
+  <section><h2>1&nbsp; Description</h2><div id="desc" contenteditable></div></section>
+
+  <section><h2>2&nbsp; Schematic</h2>
+    <figure><img id="schem" alt="schematic"><figcaption>Figure 1. Circuit schematic</figcaption></figure>
+  </section>
+
+  <section><h2>3&nbsp; Electrical Characteristics</h2>
+    <p class="cond" id="cond"></p>
+    <table class="grid" id="ec"></table>
+  </section>
+
+  <section><h2>4&nbsp; Typical Waveforms</h2><div class="figs" id="figs"></div></section>
+
+  <section><h2>5&nbsp; Bill of Materials</h2><table class="grid" id="bom"></table></section>
+
+  <section><h2>6&nbsp; Simulation Conditions</h2><table class="grid" id="sim"></table></section>
+
+  <footer class="note" contenteditable>Values are simulation results from CircuitJS Desktop (ideal or simplified part models,
+    no tolerances or temperature effects). Verify on real hardware before relying on them.</footer>
+
+  <section id="appendix"><h2>Appendix A&nbsp; Circuit File</h2>
+    <p class="cond">Paste into File → Import From Text, or save as a .csim file, to reproduce this simulation.</p>
+    <pre id="dump"></pre>
+  </section>
+</main>
+
+<script src="wvplot.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const o = window.opener && !window.opener.closed ? window.opener : null;
+const api = o && o.circuitjsApi;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } };
+
+// CircuitJS text escapes (CustomLogicModel.escape)
+const unescapeText = s => s === '\\0' ? '' :
+  s.replace(/\\(.)/g, (m, c) => ({ s: ' ', n: '\n', p: '+', q: '=', h: '#', a: '&', r: '', '\\': '\\' })[c] ?? c);
+
+// numbers of one table row share a prefix so the Unit column can hold it ("mV", "kHz")
+function scaled(vals, unit) {
+  const big = Math.max(...vals.filter(isFinite).map(Math.abs), 0);
+  let m = 1, p = '';
+  for (const [mm, pp] of PRE) if (big >= mm * 0.9995) { m = mm; p = pp; break; }
+  // 4 significant digits on the row's largest value, same decimals for the rest (0.000 / 5.588 / 9.982)
+  const d = big ? Math.max(0, 3 - Math.floor(Math.log10(big / m))) : 0;
+  return { cells: vals.map(v => isFinite(v) ? (v / m).toFixed(d) : ''), unit: p + unit };
+}
+
+function elements() {
+  const out = [];
+  for (let i = 0; i < api.count(); i++)
+    out.push({ type: api.type(i), dump: api.dumpLine(i), info: api.info(i).split('\n') });
+  return out;
+}
+
+// ---- data that changes with the simulation ----
+const SKIP = new Set(['WireElm', 'GroundElm', 'ScopeProbeElm', 'TextElm', 'BoxElm', 'LineElm', 'ScopeElm',
+  'ProbeElm', 'OutputElm', 'LabeledNodeElm', 'AmmeterElm', 'OhmMeterElm', 'TestPointElm', 'DataRecorderElm']);
+const WAVES = ['DC', 'AC', 'square', 'triangle', 'sawtooth', 'pulse', 'noise', 'variable'];
+function partValue(e) {
+  const f = e.dump.split(' ');
+  if (/VoltageElm$|^RailElm$|^VarRailElm$/.test(e.type) && f.length > 9) {
+    const wf = +f[6], freq = +f[7], vmax = +f[8], bias = +f[9];
+    if (wf === 0) return fmt(vmax + bias, 'V');
+    return fmt(vmax, 'V') + ' ' + (WAVES[wf] || '') + ', ' + fmt(freq, 'Hz');
+  }
+  return e.info.slice(1).filter(l => /^(R|C|L|Vz|hfe|β|beta|Vf|Ron|Imax|f) = /.test(l))
+    .map(l => /^[RCL] = /.test(l) ? l.slice(4) : l).join(', ');
+}
+function fillBom(els) {
+  const rows = new Map();
+  for (const e of els) {
+    if (SKIP.has(e.type) || !e.info[0]) continue;
+    const part = e.info[0].charAt(0).toUpperCase() + e.info[0].slice(1), val = partValue(e), key = part + '|' + val;
+    const r = rows.get(key) || { part, val, n: 0 };
+    r.n++;
+    rows.set(key, r);
+  }
+  const list = [...rows.values()].sort((a, b) => a.part.localeCompare(b.part) || a.val.localeCompare(b.val));
+  $('bom').innerHTML = '<thead><tr><th class="num">Item</th><th>Part</th><th>Value</th><th class="num">Qty</th></tr></thead><tbody>' +
+    (list.length ? list.map((r, i) => `<tr><td class="num">${i + 1}</td><td contenteditable>${esc(r.part)}</td>` +
+      `<td contenteditable>${esc(r.val)}</td><td class="num">${r.n}</td></tr>`).join('')
+      : '<tr><td colspan="4" class="empty">No parts.</td></tr>') + '</tbody>';
+}
+
+function traces() {
+  const s = o && o.wv;
+  return s ? s.order.map(id => s.traces[id]).filter(tr => tr && tr.t.length > 1) : [];
+}
+function range(trs) {
+  const w = o && o.wvWin;
+  const r = w && !w.closed && w.viewRange;
+  return r && r.x1 > r.x0 ? { x0: r.x0, x1: r.x1, fromViewer: true } : fullRange(trs);
+}
+
+function fillCharacteristics(trs, r) {
+  $('cond').textContent = trs.length
+    ? `Measured over t = ${fmt(r.x0, 's')} to ${fmt(r.x1, 's')}` + (r.fromViewer ? ' (the range shown in the Waveform Viewer)' : '') +
+      `, simulation time step ${fmt(api.timeStep(), 's')}. Typ = time-weighted average.`
+    : '';
+  if (!trs.length) {
+    $('ec').innerHTML = '<tbody><tr><td class="empty">No probes yet. Place oscilloscope probes (key h) or plot values in the ' +
+      'Waveform Viewer, run the circuit, then press Refresh data.</td></tr></tbody>';
+    return;
+  }
+  let html = '<thead><tr><th>Parameter</th><th>Symbol</th><th class="num">Min</th><th class="num">Typ</th>' +
+             '<th class="num">Max</th><th>Unit</th></tr></thead><tbody>';
+  trs.forEach((tr, k) => {
+    clipTrace(tr, r.x0, r.x1);
+    const m = measure(tr), u = tr.unit, sym = (u === 'A' ? 'I' : u === 'V' ? 'V' : u) + `<sub>${k + 1}</sub>`;
+    html += `<tr class="group"><td colspan="6">${esc(tr.name)}</td></tr>`;
+    if (!m) { html += '<tr><td colspan="6" class="empty">Not enough samples in range.</td></tr>'; return; }
+    const row = (name, s, vals, unit) => {
+      const v = scaled(vals, unit);
+      html += `<tr><td>${name}</td><td>${s}</td>` + v.cells.map(c => `<td class="num">${c}</td>`).join('') + `<td>${v.unit}</td></tr>`;
+    };
+    row(u === 'A' ? 'Current' : u === 'V' ? 'Voltage' : 'Value', sym, [m.lo, m.avg, m.hi], u);
+    row('Peak-to-peak', sym + '<sub>pp</sub>', [NaN, m.hi - m.lo, NaN], u);
+    row('RMS', sym + '<sub>rms</sub>', [NaN, m.rms, NaN], u);
+    if (m.freq) {
+      row('Frequency', 'f', [NaN, m.freq, NaN], 'Hz');
+      row('Period', 'T', [NaN, 1 / m.freq, NaN], 's');
+      html += `<tr><td>Duty cycle</td><td>D</td><td class="num"></td><td class="num">${(m.duty * 100).toFixed(1)}</td><td class="num"></td><td>%</td></tr>`;
+    }
+  });
+  $('ec').innerHTML = html + '</tbody>';
+}
+
+const PRINT_COLORS = ['#0b3d91', '#b91c1c', '#047857', '#7c3aed', '#c2410c', '#0e7490', '#a16207', '#be185d'];
+function fillFigures(trs, r) {
+  const figs = $('figs');
+  figs.innerHTML = trs.length ? '' : '<p class="empty">No waveforms recorded.</p>';
+  trs.forEach((tr, k) => {
+    const fig = document.createElement('figure'), cv = document.createElement('canvas'), cap = document.createElement('figcaption');
+    cap.contentEditable = true;
+    cap.textContent = `Figure ${k + 2}. ${tr.name} vs time`;
+    fig.append(cv, cap);
+    figs.append(fig);
+    const W = cv.clientWidth, H = cv.clientHeight, S = 4; // 4x pixels: sharp in the PDF
+    cv.width = W * S; cv.height = H * S;
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(S, 0, 0, S, 0, 0);
+    plotTraces(ctx, W, H, [tr], r.x0, r.x1, {
+      bg: '#fff', grid: '#e2e5ea', text: '#444', frame: '#888', font: '10px Segoe UI, Arial, sans-serif',
+      lineWidth: 1.4, color: () => PRINT_COLORS[k % PRINT_COLORS.length]
+    });
+  });
+}
+
+function fillSim(els, trs) {
+  const rows = [
+    ['Simulation time step', fmt(api.timeStep(), 's')],
+    ['Simulated time', fmt(api.time(), 's')],
+    ['Circuit elements', els.length],
+    ['Recorded channels', trs.length + (trs.length ? ` (${trs.map(t => t.t.length).reduce((a, b) => a + b, 0).toLocaleString()} samples)` : '')],
+    ['Simulator', 'CircuitJS Desktop (modified nodal analysis, trapezoidal / backward Euler integration)'],
+    ['Generated', new Date().toLocaleString()]
+  ];
+  $('sim').innerHTML = '<tbody>' + rows.map(([a, b]) => `<tr><td>${a}</td><td>${esc(b)}</td></tr>`).join('') + '</tbody>';
+}
+
+function refresh() {
+  if (!api) {
+    $('title').textContent = 'Open this from CircuitJS (File → Export Datasheet).';
+    return;
+  }
+  const els = elements(), trs = traces(), r = range(trs);
+  $('schem').src = api.image();
+  fillCharacteristics(trs, r);
+  fillFigures(trs, r);
+  fillBom(els);
+  fillSim(els, trs);
+  $('dump').textContent = api.dump();
+  return els;
+}
+
+// ---- first load: also fill the editable text once ----
+const els = refresh();
+if (els) {
+  const name = (api.title() || '').replace(/\.(csim|txt)$/i, '') || 'Untitled circuit';
+  $('title').textContent = name;
+  const texts = els.filter(e => e.type === 'TextElm').map(e => unescapeText(e.dump.split(' ').slice(7).join(' ')));
+  $('desc').textContent = texts.join('\n') || 'Describe what the circuit does, its inputs, outputs and intended use.';
+}
+$('date').textContent = new Date().toISOString().slice(0, 10);
+$('author').textContent = store('ds-author') || 'Your name';
+$('author').addEventListener('input', () => store('ds-author', $('author').textContent));
+
+// logo, remembered for next time
+function setLogo(src) {
+  $('logo').src = src || '';
+  $('logobox').className = src ? '' : 'none';
+}
+setLogo(store('ds-logo'));
+$('logofile').onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { setLogo(rd.result); store('ds-logo', rd.result); };
+  rd.readAsDataURL(f);
+};
+$('nologo').onclick = () => { setLogo(null); store('ds-logo', ''); };
+
+// page header/footer. Defining all four boxes also replaces the browser's own date/URL header and footer.
+function pageStyle() {
+  const q = s => s.replace(/["\\\n]/g, ' ');
+  const title = q($('title').textContent), doc = q($('docno').textContent + '  ·  Rev ' + $('rev').textContent);
+  document.title = $('title').textContent + ' datasheet';
+  const f = 'font: 7.5pt Segoe UI, Arial, sans-serif; color: #5b6270;';
+  $('pagestyle').textContent = `@page { size: A4; margin: 14mm 14mm 16mm;
+    @top-left { content: ""; } @top-center { content: ""; }
+    @top-right { content: "${doc}"; ${f} }
+    @bottom-left { content: "${title}"; ${f} }
+    @bottom-center { content: ""; }
+    @bottom-right { content: "Page " counter(page) " of " counter(pages); ${f} } }`;
+}
+pageStyle();
+for (const id of ['title', 'docno', 'rev']) $(id).addEventListener('input', pageStyle);
+
+$('appx').onchange = () => document.body.classList.toggle('noappendix', !$('appx').checked);
+$('refresh').onclick = refresh;
+$('print').onclick = () => { pageStyle(); window.print(); };
+</script>
+</body>
+</html>

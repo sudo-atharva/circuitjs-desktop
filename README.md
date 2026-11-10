@@ -13,7 +13,7 @@ small native app (Rust + Tauri, ~7 MB) with a big waveform viewer and other addi
 
 Get the latest release from the [Releases page](https://github.com/sudo-atharva/circuitjs-desktop/releases):
 
-- `CircuitJS_1.1.0_x64-setup.exe`: installer (per user, no admin needed). Registers `.csim` files so they open on double-click.
+- `CircuitJS_1.2.0_x64-setup.exe`: installer (per user, no admin needed). Registers `.csim` files so they open on double-click.
 - `circuitjs.exe`: portable, no install.
 
 Needs Windows 10 or 11 (uses the built-in WebView2). The app is not code-signed yet, so Windows SmartScreen
@@ -36,10 +36,18 @@ may warn the first time: click *More info → Run anyway*.
 - **Everyday Circuits** menu: LED + resistor, transistor switch, bridge rectifier, zener and 7805-style
   regulators, 555 blinker, PWM filter, op-amp amplifier (also in [examples/](examples/)).
 - **Scope frequency readout fixed**: small scopes now show the frequency of slow and compressed signals too.
+- **Datasheet / PDF export** (File → Export Datasheet, or the *Datasheet / PDF* button in the Waveform Viewer):
+  an A4 datasheet with title block (doc no., revision, author, optional logo), description, black-and-white
+  schematic, electrical characteristics table (min / typ / max per probe: voltage, p-p, RMS, frequency, period,
+  duty), a waveform figure per probe, bill of materials, simulation conditions and the circuit file as an appendix.
+  Every text is editable before saving; *Save as PDF / Print* opens the print dialog (choose Microsoft Print to PDF).
+  Measurements cover the time range shown in the Waveform Viewer.
 - **MCP server (optional)** so AI assistants such as Claude Code and Claude Desktop can build and simulate
   circuits (see below). Claude Desktop launches it directly with `circuitjs.exe --mcp-stdio`, no Node.js needed.
 
 ![Everyday Circuits menu](docs/everyday-menu.png)
+
+![Datasheet export](docs/datasheet.png)
 
 ## Quick start
 

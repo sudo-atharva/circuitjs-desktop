@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0
+
+### New
+- **Datasheet / PDF export** (File → Export Datasheet, or *Datasheet / PDF* in the Waveform Viewer): editable A4
+  datasheet with title block, schematic, electrical characteristics, waveform figures, bill of materials,
+  simulation conditions and the circuit file; save it as PDF from the print dialog.
+
 ## 1.1.0
 
 ### New
