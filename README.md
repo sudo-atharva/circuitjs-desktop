@@ -38,6 +38,8 @@ may warn the first time: click *More info → Run anyway*.
 - **Scope frequency readout fixed**: small scopes now show the frequency of slow and compressed signals too.
 - **MCP server (optional)** so AI assistants such as Claude can build and simulate circuits (see below).
 
+![Everyday Circuits menu](docs/everyday-menu.png)
+
 ## Quick start
 
 1. Open **Circuits → Everyday Circuits → 555 LED Blinker** (or any example).
@@ -45,7 +47,28 @@ may warn the first time: click *More info → Run anyway*.
 3. Place a second probe somewhere else, then drag the probes around while it runs.
 4. In the viewer press **Pause**, click for cursor A, right-click for cursor B, and read the values below the plot.
 
-Press `?` for all keyboard shortcuts.
+Press `?` for all keyboard shortcuts:
+
+![Keyboard shortcuts](docs/shortcuts.png)
+
+## Frequency range
+
+The frequency readouts (scopes, Waveform Viewer, MCP) time the signal's rising edges, so the limits come from the
+simulation **time step**, not the screen. Measured with a 1 V sine at the default 5 µs step:
+
+| Signal | Samples per cycle | Frequency reading | Peak reading (true 1 V) |
+|---|---|---|---|
+| 0.5 Hz to 10 kHz | 20 or more | exact | 1.000 V |
+| 20 kHz | 10 | exact | 0.951 V |
+| 30 to 60 kHz | 3.3 to 6.7 | exact | 0.95 to 1.00 V |
+| 80 kHz | 2.5 | +3 % | 0.951 V |
+| 100 kHz and up | 2 or fewer | none shown | wrong (aliasing) |
+
+- **Max:** frequency reads exactly up to about 1 / (3.3 × time step): 60 kHz at 5 µs, 300 kHz at 1 µs (measured).
+  For waveforms whose *shape* matters, stay at 20+ samples per cycle (about 10 kHz at 5 µs).
+  Set a smaller time step in Options → Other Options for faster circuits; the simulation then runs slower.
+- **Min:** no hard limit. The counter needs about 2 full cycles in view: widen the Viewer's *Show last*, slow the
+  small scope, or use a longer *Run for* time. Above the limit it shows nothing rather than a wrong number.
 
 ## MCP server (AI control)
 
