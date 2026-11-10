@@ -1,0 +1,310 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Waveform Viewer</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #111; color: #ddd; font: 13px system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  #bar { display: flex; gap: 6px; align-items: center; padding: 6px 8px; background: #1b1b1b; flex-wrap: wrap; }
+  button, input { background: #2a2a2a; color: #ddd; border: 1px solid #444; border-radius: 4px; padding: 3px 9px; font: inherit; }
+  button:hover { background: #333; }
+  #help { color: #888; margin-left: auto; font-size: 12px; }
+  #legend { display: flex; gap: 14px; flex-wrap: wrap; padding: 4px 8px; min-height: 18px; }
+  .chip span { cursor: pointer; color: #888; margin-left: 5px; }
+  .chip span:hover { color: #f66; }
+  #plot { flex: 1; position: relative; min-height: 0; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+  #readout { padding: 5px 8px; background: #1b1b1b; font: 12px Consolas, monospace; white-space: pre; min-height: 2.6em; }
+</style>
+</head>
+<body>
+<div id="bar">
+  Run for <input id="stop" value="10m" size="7" title="Stop time in seconds, e.g. 10m, 500u, 2"> s
+  <button id="run">Run</button>
+  <button id="halt">Stop</button>
+  <button id="fit">Fit</button>
+  <button id="csv">Export CSV</button>
+  <span id="help">drag: zoom &middot; wheel: zoom &middot; right-drag: pan &middot; click: cursor A &middot; right-click: cursor B &middot; double-click: fit</span>
+</div>
+<div id="legend"></div>
+<div id="plot"><canvas id="cv"></canvas></div>
+<div id="readout"></div>
+<script>
+const COLORS = ['#ffd84a', '#4ade80', '#60a5fa', '#f472b6', '#fb923c', '#a78bfa', '#2dd4bf', '#f87171'];
+const PRE = [[1e9, 'G'], [1e6, 'M'], [1e3, 'k'], [1, ''], [1e-3, 'm'], [1e-6, 'µ'], [1e-9, 'n'], [1e-12, 'p']];
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+
+let view = null;           // null = fit all (follows a running sim); else {x0, x1}
+let curA = null, curB = null, drag = null, lastVer = -1, dirty = true, legendKey = '';
+let geo = { L: 0, pw: 1, x0: 0, x1: 1 };
+
+const store = () => (window.opener && !window.opener.closed) ? window.opener.wv : null;
+const java = () => window.opener && !window.opener.closed && window.opener.wvJava;
+const traces = () => { const s = store(); return s ? s.order.map(id => s.traces[id]).filter(Boolean) : []; };
+const color = tr => COLORS[(tr.id - 1) % COLORS.length];
+
+function fmt(v, u) {
+  if (!isFinite(v)) return '—';
+  if (v === 0) return '0' + u;
+  const a = Math.abs(v);
+  for (const [m, p] of PRE) if (a >= m * 0.9995) return +(v / m).toPrecision(4) + p + u;
+  return v.toExponential(3) + u;
+}
+function parseSI(s) {
+  const m = String(s).trim().match(/^([-+]?[\d.]+(?:e[-+]?\d+)?)\s*([GMkmuµnp]?)/i);
+  if (!m) return NaN;
+  const k = { G: 1e9, M: 1e6, k: 1e3, m: 1e-3, u: 1e-6, 'µ': 1e-6, n: 1e-9, p: 1e-12 }[m[2]] || 1;
+  return parseFloat(m[1]) * k;
+}
+function niceStep(range, n) {
+  const raw = range / Math.max(1, n), p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+  return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10) * p;
+}
+function lowerBound(a, x) {
+  let lo = 0, hi = a.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] < x) lo = m + 1; else hi = m; }
+  return lo;
+}
+function valueAt(tr, x) {
+  const n = tr.t.length;
+  if (!n || x < tr.t[0] || x > tr.t[n - 1]) return NaN;
+  const i = lowerBound(tr.t, x);
+  if (tr.t[i] === x || i === 0) return tr.v[i];
+  const t0 = tr.t[i - 1], t1 = tr.t[i];
+  return tr.v[i - 1] + (tr.v[i] - tr.v[i - 1]) * (x - t0) / (t1 - t0);
+}
+function fullRange(trs) {
+  let x0 = Infinity, x1 = -Infinity;
+  for (const tr of trs) if (tr.t.length) { x0 = Math.min(x0, tr.t[0]); x1 = Math.max(x1, tr.t[tr.t.length - 1]); }
+  if (!isFinite(x0)) return { x0: 0, x1: 1e-3 };
+  return { x0: x0, x1: x1 > x0 ? x1 : x0 + 1e-3 };
+}
+const pxToX = px => geo.x0 + (px - geo.L) / geo.pw * (geo.x1 - geo.x0);
+
+function updateLegend(trs) {
+  const key = trs.map(t => t.id + t.name).join('|');
+  if (key === legendKey) return;
+  legendKey = key;
+  const lg = $('legend');
+  lg.innerHTML = '';
+  if (!trs.length) {
+    lg.textContent = store() ? 'Right-click a wire or part in CircuitJS → "Plot Voltage/Current in Waveform Viewer".'
+                             : 'Open this window from CircuitJS (Scopes → Waveform Viewer).';
+    return;
+  }
+  for (const tr of trs) {
+    const c = document.createElement('span');
+    c.className = 'chip';
+    c.style.color = color(tr);
+    c.textContent = tr.name;
+    const x = document.createElement('span');
+    x.textContent = '✕';
+    x.title = 'Remove trace';
+    x.onclick = () => { const j = java(); if (j) j.remove(tr.id); };
+    c.appendChild(x);
+    lg.appendChild(c);
+  }
+}
+
+function draw() {
+  const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, W, H);
+
+  const trs = traces();
+  updateLegend(trs);
+  const { x0, x1 } = view || fullRange(trs);
+  const units = [...new Set(trs.map(t => t.unit))];
+  const left = units.includes('V') ? 'V' : (units[0] || 'V');
+  const right = units.find(u => u !== left);
+  const L = 70, R = right ? 70 : 16, T = 10, B = 26, pw = Math.max(1, W - L - R), ph = Math.max(1, H - T - B);
+  geo = { L, pw, x0, x1 };
+  const X = x => L + (x - x0) / (x1 - x0) * pw;
+
+  // autoscale each unit over the visible time range
+  const yr = {};
+  for (const tr of trs) {
+    tr._i0 = Math.max(0, lowerBound(tr.t, x0) - 1);
+    tr._i1 = Math.min(tr.t.length, lowerBound(tr.t, x1) + 1);
+    const r = yr[tr.unit] || (yr[tr.unit] = { lo: Infinity, hi: -Infinity });
+    for (let i = tr._i0; i < tr._i1; i++) { const v = tr.v[i]; if (v < r.lo) r.lo = v; if (v > r.hi) r.hi = v; }
+  }
+  for (const u of [left, right]) {
+    if (!u) continue;
+    const r = yr[u] || (yr[u] = { lo: -1, hi: 1 });
+    if (!isFinite(r.lo)) { r.lo = -1; r.hi = 1; }
+    if (r.hi - r.lo < 1e-12) { const d = Math.max(Math.abs(r.hi) * 0.1, 1e-3); r.lo -= d; r.hi += d; }
+    const pad = (r.hi - r.lo) * 0.06; r.lo -= pad; r.hi += pad;
+  }
+  const Y = (u, v) => T + (1 - (v - yr[u].lo) / (yr[u].hi - yr[u].lo)) * ph;
+
+  // grid + axes
+  ctx.font = '11px system-ui, sans-serif';
+  ctx.lineWidth = 1;
+  const xs = niceStep(x1 - x0, pw / 100);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let x = Math.ceil(x0 / xs) * xs; x <= x1; x += xs) {
+    const px = Math.round(X(x)) + 0.5;
+    ctx.strokeStyle = '#262626'; ctx.beginPath(); ctx.moveTo(px, T); ctx.lineTo(px, T + ph); ctx.stroke();
+    ctx.fillStyle = '#999'; ctx.fillText(fmt(Math.abs(x) < xs * 1e-6 ? 0 : x, 's'), px, T + ph + 6);
+  }
+  ctx.textBaseline = 'middle';
+  for (const [u, side] of [[left, 'L'], [right, 'R']]) {
+    if (!u) continue;
+    const r = yr[u], ys = niceStep(r.hi - r.lo, ph / 50);
+    for (let v = Math.ceil(r.lo / ys) * ys; v <= r.hi; v += ys) {
+      const py = Math.round(Y(u, v)) + 0.5;
+      if (side === 'L') { ctx.strokeStyle = '#262626'; ctx.beginPath(); ctx.moveTo(L, py); ctx.lineTo(L + pw, py); ctx.stroke(); }
+      ctx.fillStyle = '#999';
+      ctx.textAlign = side === 'L' ? 'right' : 'left';
+      ctx.fillText(fmt(Math.abs(v) < ys * 1e-6 ? 0 : v, u), side === 'L' ? L - 6 : L + pw + 6, py);
+    }
+  }
+  ctx.strokeStyle = '#555';
+  ctx.strokeRect(L + 0.5, T + 0.5, pw, ph);
+
+  // traces: per-pixel min/max when dense, polyline when sparse
+  ctx.save();
+  ctx.beginPath(); ctx.rect(L, T, pw, ph); ctx.clip();
+  ctx.lineWidth = 1.5;
+  for (const tr of trs) {
+    const u = tr.unit, t = tr.t, v = tr.v;
+    ctx.strokeStyle = color(tr);
+    ctx.beginPath();
+    if (tr._i1 - tr._i0 > pw * 2) {
+      let col = null, mn = 0, mx = 0, first = true;
+      const flush = () => {
+        if (first) { ctx.moveTo(col, Y(u, mn)); first = false; } else ctx.lineTo(col, Y(u, mn));
+        ctx.lineTo(col, Y(u, mx));
+      };
+      for (let i = tr._i0; i < tr._i1; i++) {
+        const c = Math.floor(X(t[i]));
+        if (c !== col) { if (col !== null) flush(); col = c; mn = mx = v[i]; }
+        else { if (v[i] < mn) mn = v[i]; if (v[i] > mx) mx = v[i]; }
+      }
+      if (col !== null) flush();
+    } else {
+      for (let i = tr._i0; i < tr._i1; i++) {
+        if (i === tr._i0) ctx.moveTo(X(t[i]), Y(u, v[i])); else ctx.lineTo(X(t[i]), Y(u, v[i]));
+      }
+    }
+    ctx.stroke();
+  }
+
+  // cursors
+  for (const [cx, name] of [[curA, 'A'], [curB, 'B']]) {
+    if (cx === null) continue;
+    const px = Math.round(X(cx)) + 0.5;
+    ctx.setLineDash([4, 4]); ctx.strokeStyle = '#eee'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px, T); ctx.lineTo(px, T + ph); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#eee'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(name, px + 4, T + 4);
+    for (const tr of trs) {
+      const val = valueAt(tr, cx);
+      if (!isFinite(val)) continue;
+      ctx.fillStyle = color(tr);
+      ctx.beginPath(); ctx.arc(px, Y(tr.unit, val), 3.5, 0, 7); ctx.fill();
+    }
+  }
+  // zoom box
+  if (drag && drag.button === 0 && Math.abs(drag.cur - drag.sx) > 3) {
+    ctx.fillStyle = 'rgba(96,165,250,0.15)';
+    ctx.fillRect(Math.min(drag.sx, drag.cur), T, Math.abs(drag.cur - drag.sx), ph);
+  }
+  ctx.restore();
+
+  // readout
+  let out = '';
+  if (curA !== null || curB !== null) {
+    out += 'A: ' + (curA !== null ? fmt(curA, 's') : '—') + '    B: ' + (curB !== null ? fmt(curB, 's') : '—');
+    if (curA !== null && curB !== null) {
+      const dt = curB - curA;
+      out += '    Δt = ' + fmt(dt, 's') + '    1/Δt = ' + fmt(dt ? 1 / Math.abs(dt) : NaN, 'Hz');
+    }
+    for (const tr of trs) {
+      const a = curA !== null ? valueAt(tr, curA) : NaN, b = curB !== null ? valueAt(tr, curB) : NaN;
+      out += '\n' + tr.name.padEnd(32).slice(0, 32) + '  A = ' + fmt(a, tr.unit).padEnd(12) + '  B = ' + fmt(b, tr.unit).padEnd(12) +
+             (isFinite(a) && isFinite(b) ? '  Δ = ' + fmt(b - a, tr.unit) : '');
+    }
+  } else out = 'Click the plot to place cursor A, right-click for cursor B.';
+  if ($('readout').textContent !== out) $('readout').textContent = out;
+}
+
+function loop() {
+  const s = store(), ver = s ? s.version : -1;
+  if (ver !== lastVer || dirty) { lastVer = ver; dirty = false; draw(); }
+  requestAnimationFrame(loop);
+}
+
+// mouse
+cv.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('mousedown', e => {
+  drag = { button: e.button, sx: e.offsetX, cur: e.offsetX, view: { x0: geo.x0, x1: geo.x1 }, before: view };
+  e.preventDefault();
+});
+window.addEventListener('mousemove', e => {
+  if (!drag) return;
+  drag.cur = e.clientX - cv.getBoundingClientRect().left;
+  if (drag.button === 2) {
+    const dx = (drag.cur - drag.sx) / geo.pw * (drag.view.x1 - drag.view.x0);
+    view = { x0: drag.view.x0 - dx, x1: drag.view.x1 - dx };
+  }
+  dirty = true;
+});
+window.addEventListener('mouseup', () => {
+  if (!drag) return;
+  const d = drag; drag = null; dirty = true;
+  if (Math.abs(d.cur - d.sx) <= 3) {
+    if (d.button === 0) curA = pxToX(d.sx);
+    if (d.button === 2) { curB = pxToX(d.sx); view = d.before; }
+    return;
+  }
+  if (d.button === 0) {
+    const a = pxToX(Math.min(d.sx, d.cur)), b = pxToX(Math.max(d.sx, d.cur));
+    if (b > a) view = { x0: a, x1: b };
+  }
+});
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const f = e.deltaY > 0 ? 1.25 : 0.8, xm = pxToX(e.offsetX);
+  view = { x0: xm - (xm - geo.x0) * f, x1: xm + (geo.x1 - xm) * f };
+  dirty = true;
+}, { passive: false });
+cv.addEventListener('dblclick', () => { view = null; dirty = true; });
+
+// toolbar
+$('fit').onclick = () => { view = null; dirty = true; };
+$('run').onclick = () => {
+  const s = parseSI($('stop').value), j = java();
+  if (!(s > 0)) { alert('Enter a stop time like 10m, 500u or 2'); return; }
+  if (j) { view = null; curA = curB = null; j.run(s); }
+};
+$('halt').onclick = () => { const j = java(); if (j) j.stop(); };
+$('stop').addEventListener('keydown', e => { if (e.key === 'Enter') $('run').click(); });
+$('csv').onclick = () => {
+  const trs = traces();
+  if (!trs.length) return;
+  const base = trs.reduce((a, b) => b.t.length > a.t.length ? b : a);
+  const q = s => '"' + s.replace(/"/g, '""') + '"';
+  const rows = ['time (s),' + trs.map(t => q(t.name + ' (' + t.unit + ')')).join(',')];
+  for (let i = 0; i < base.t.length; i++)
+    rows.push(base.t[i] + ',' + trs.map(tr => tr === base ? tr.v[i] : valueAt(tr, base.t[i])).join(','));
+  const text = rows.join('\n') + '\n', o = window.opener;
+  if (o && o.saveTextAs) { o.saveTextAs(text, 'csv'); return; }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv' }));
+  a.download = 'waveform.csv';
+  a.click();
+};
+window.addEventListener('resize', () => { dirty = true; });
+loop();
+</script>
+</body>
+</html>

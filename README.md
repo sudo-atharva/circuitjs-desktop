@@ -113,7 +113,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 The `desktop/` folder is a small Rust app ([Tauri](https://tauri.app)) that embeds the compiled
 simulator into a single `circuitjs.exe` (~7 MB) using Windows' built-in WebView2. File Open/Save
-use native dialogs.
+use native dialogs. Circuits save as `.csim` (same text format as before; `.txt` still opens).
+
+**Waveform viewer (LTspice-style):** right-click any wire or part → *Plot Voltage/Current in Waveform Viewer*
+(or *Scopes → Waveform Viewer...*). It records the whole run, not a rolling window. Drag to zoom, wheel to zoom,
+right-drag to pan, double-click to fit, click/right-click to place cursors A/B (shows Δt, 1/Δt, ΔV/ΔI).
+*Run for* does a transient run from t=0 that stops at the given time. *Export CSV* saves the traces.
 
 Build locally (needs JDK 11+ and Rust):
 
@@ -121,8 +126,9 @@ Build locally (needs JDK 11+ and Rust):
 # 1. compile Java -> JS (download GWT 2.12.2 SDK and unzip it next to the repo first)
 java -cp "src;gwt-2.12.2/gwt-user.jar;gwt-2.12.2/gwt-dev.jar" com.google.gwt.dev.Compiler -war war -sourceLevel 1.8 com.lushprojects.circuitjs1.circuitjs1
 # 2. build the exe
-cd desktop && cargo build --release
-# -> desktop/target/release/circuitjs.exe
+cd desktop && npx @tauri-apps/cli@2 build
+# -> desktop/target/release/circuitjs.exe (portable)
+# -> desktop/target/release/bundle/nsis/CircuitJS_*_x64-setup.exe (installer, registers .csim files)
 ```
 
 GitHub Actions (`.github/workflows/build.yml`) builds the exe on every push; pushing a tag like

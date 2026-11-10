@@ -135,6 +135,7 @@ MouseOutHandler, MouseWheelHandler {
     MenuItem elmCopyMenuItem;
     MenuItem elmDeleteMenuItem;
     MenuItem elmScopeMenuItem;
+    MenuItem elmWvVoltItem, elmWvCurItem;
     MenuItem elmFloatScopeMenuItem;
     MenuItem elmAddScopeMenuItem;
     MenuItem elmFlipMenuItem;
@@ -489,6 +490,7 @@ MouseOutHandler, MouseWheelHandler {
 	m.addItem(unstackAllItem = iconMenuItem("columns", "Unstack All", new MyCommand("scopes", "unstackAll")));
 	m.addItem(combineAllItem = iconMenuItem("object-group", "Combine All", new MyCommand("scopes", "combineAll")));
 	m.addItem(separateAllItem = iconMenuItem("object-ungroup", "Separate All", new MyCommand("scopes", "separateAll")));
+	m.addItem(new MenuItem(LS("Waveform Viewer..."), new MyCommand("view", "waveform")));
 	menuBar.addItem(LS("Scopes"), m);
 
 	optionsMenuBar = m = new MenuBar(true );
@@ -672,6 +674,8 @@ MouseOutHandler, MouseWheelHandler {
 	elmMenuBar.addItem(elmScopeMenuItem = new MenuItem(LS("View in New Scope"), new MyCommand("elm","viewInScope")));
 	elmMenuBar.addItem(elmFloatScopeMenuItem  = new MenuItem(LS("View in New Undocked Scope"), new MyCommand("elm","viewInFloatScope")));
 	elmMenuBar.addItem(elmAddScopeMenuItem = new MenuItem(LS("Add to Existing Scope"), new MyCommand("elm", "addToScope0")));
+	elmMenuBar.addItem(elmWvVoltItem = new MenuItem(LS("Plot Voltage in Waveform Viewer"), new MyCommand("elm", "wvVolt")));
+	elmMenuBar.addItem(elmWvCurItem = new MenuItem(LS("Plot Current in Waveform Viewer"), new MyCommand("elm", "wvCur")));
 	elmMenuBar.addItem(elmCutMenuItem = new MenuItem(LS("Cut"),new MyCommand("elm","cut")));
 	elmMenuBar.addItem(elmCopyMenuItem = new MenuItem(LS("Copy"),new MyCommand("elm","copy")));
 	elmMenuBar.addItem(elmDeleteMenuItem = new MenuItem(LS("Delete"),new MyCommand("elm","delete")));
@@ -736,8 +740,8 @@ MouseOutHandler, MouseWheelHandler {
 	});
 
 
-	
-	
+	WaveformViewer.exportJS();
+	exportLoadHook();
 	setSimRunning(running);
     }
 
@@ -2059,6 +2063,7 @@ MouseOutHandler, MouseWheelHandler {
     
     // analyze the circuit when something changes, so it can be simulated
     void analyzeCircuit() {
+	WaveformViewer.prune(this);
 	if (elmList.isEmpty()) {
 	    postDrawList = new Vector<Point>();
 	    badConnectionList = new Vector<Point>();
@@ -2708,6 +2713,7 @@ MouseOutHandler, MouseWheelHandler {
 		calcWireCurrents();
 	    for (i = 0; i != scopeCount; i++)
 	    	scopes[i].timeStep();
+	    WaveformViewer.step(this);
 	    for (i=0; i != elmList.size(); i++)
 		if (getElm(i) instanceof ScopeElm)
 		    ((ScopeElm)getElm(i)).stepScope();
@@ -2845,6 +2851,15 @@ MouseOutHandler, MouseWheelHandler {
         });
     }-*/;
     
+    // lets the desktop app load a file it was launched with (double-clicked .csim)
+    static native void exportLoadHook() /*-{
+        $wnd.circuitjsLoad = $entry(function (text, name) {
+            @com.lushprojects.circuitjs1.client.CirSim::electronOpenFileCallback(Ljava/lang/String;Ljava/lang/String;)(text, name);
+        });
+        if ($wnd.circuitjsReady)
+            $wnd.circuitjsReady();
+    }-*/;
+
     static native void toggleDevTools() /*-{
         $wnd.toggleDevTools();
     }-*/;
@@ -3004,6 +3019,13 @@ MouseOutHandler, MouseWheelHandler {
     		    scopes[i].speed = scopes[i-1].speed;
     	}
     	
+    	if (item=="wvVolt" && menuElm != null)
+    	    WaveformViewer.addProbe(menuElm, WaveformViewer.KIND_VOLTAGE);
+    	if (item=="wvCur" && menuElm != null)
+    	    WaveformViewer.addProbe(menuElm, WaveformViewer.KIND_CURRENT);
+    	if (item=="waveform")
+    	    WaveformViewer.open();
+
     	if (item=="viewInFloatScope" && menuElm != null) {
     	    ScopeElm newScope = new ScopeElm(snapGrid(menuElm.x+50), snapGrid(menuElm.y+50));
     	    elmList.addElement(newScope);
@@ -4169,6 +4191,8 @@ MouseOutHandler, MouseWheelHandler {
     	    	if (! (mouseElm instanceof ScopeElm)) {
     	    	    elmScopeMenuItem.setEnabled(mouseElm.canViewInScope());
     	    	    elmFloatScopeMenuItem.setEnabled(mouseElm.canViewInScope());
+    	    	    elmWvVoltItem.setEnabled(mouseElm.canViewInScope());
+    	    	    elmWvCurItem.setEnabled(mouseElm.canViewInScope());
     	    	    if ((scopeCount + countScopeElms()) <= 1) {
     	    		elmAddScopeMenuItem.setCommand(new MyCommand("elm", "addToScope0"));
     	    		elmAddScopeMenuItem.setSubMenu(null);
