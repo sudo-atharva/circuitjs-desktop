@@ -133,3 +133,21 @@ cd desktop && npx @tauri-apps/cli@2 build
 
 GitHub Actions (`.github/workflows/build.yml`) builds the exe on every push; pushing a tag like
 `v0.1.0` attaches it to a GitHub release.
+
+### MCP server (AI control)
+
+While the desktop app is running it serves MCP at `http://127.0.0.1:7432/mcp` (local only;
+change the port with the `CIRCUITJS_MCP_PORT` environment variable). Add it to Claude Code with:
+
+```
+claude mcp add --transport http circuitjs http://127.0.0.1:7432/mcp
+```
+
+Tools: `list_examples`, `load_example`, `get_circuit`, `load_circuit`, `list_elements`,
+`simulate` (transient run with probes; returns min/max/avg/rms/frequency and a resampled waveform),
+`set_running`. Simulations requested over MCP run at full CPU speed, then return to normal speed.
+Keep the app window open (not minimized): Windows slows down hidden web pages.
+
+### Everyday circuits
+
+See [examples/](examples/) or **Circuits → Everyday Circuits** in the app.

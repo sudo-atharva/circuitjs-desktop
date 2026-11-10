@@ -741,6 +741,7 @@ MouseOutHandler, MouseWheelHandler {
 
 
 	WaveformViewer.exportJS();
+	JsApi.export();
 	exportLoadHook();
 	setSimRunning(running);
     }
@@ -2552,6 +2553,8 @@ MouseOutHandler, MouseWheelHandler {
 
     double getIterCount() {
     	// IES - remove interaction
+	if (JsApi.turbo)
+	    return 1e6; // as fast as possible (frames still yield every 500ms)
 	if (speedBar.getValue() == 0)
 	   return 0;
 

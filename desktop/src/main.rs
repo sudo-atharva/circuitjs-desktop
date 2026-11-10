@@ -1,11 +1,13 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod mcp;
+
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use tauri::webview::NewWindowResponse;
 use tauri::{WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
-const SHIM: &str = include_str!("shim.js");
+const SHIM: &str = concat!(include_str!("shim.js"), include_str!("mcp.js"));
 
 fn read(p: &Path) -> Result<(String, String), String> {
     let text = std::fs::read_to_string(p).map_err(|e| format!("{}: {e}", p.display()))?;
@@ -63,8 +65,10 @@ fn main() {
             write_file,
             open_file,
             startup_file,
-            toggle_devtools
+            toggle_devtools,
+            mcp::mcp_reply
         ])
+        .manage(mcp::Pending::default())
         .setup(|app| {
             let handle = app.handle().clone();
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("circuitjs.html".into()))
@@ -93,6 +97,11 @@ fn main() {
                     }
                 })
                 .build()?;
+            let port = std::env::var("CIRCUITJS_MCP_PORT")
+                .ok()
+                .and_then(|p| p.parse().ok())
+                .unwrap_or(7432);
+            mcp::start(app.handle().clone(), port);
             Ok(())
         })
         .run(tauri::generate_context!())

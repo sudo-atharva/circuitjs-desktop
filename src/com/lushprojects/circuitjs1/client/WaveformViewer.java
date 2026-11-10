@@ -14,10 +14,16 @@ class WaveformViewer {
     static double stopTime;
 
     static void addProbe(CircuitElm e, int kind) {
+	addProbe(e, kind, true);
+    }
+
+    // returns the probe id (trace id in window.wv)
+    static int addProbe(CircuitElm e, int kind, boolean show) {
 	for (int i = 0; i != elms.size(); i++)
 	    if (elms.get(i) == e && kinds.get(i) == kind) {
-		open();
-		return;
+		if (show)
+		    open();
+		return ids.get(i);
 	    }
 	int id = nextId++;
 	elms.add(e);
@@ -25,7 +31,14 @@ class WaveformViewer {
 	ids.add(id);
 	String name = (kind == KIND_CURRENT ? "I" : "V") + id + ": " + e.getScopeText(Scope.VAL_VOLTAGE);
 	jsAddTrace(id, name, kind == KIND_CURRENT ? "A" : "V");
-	open();
+	if (show)
+	    open();
+	return id;
+    }
+
+    static void clear() {
+	while (!elms.isEmpty())
+	    removeAt(elms.size()-1);
     }
 
     static double value(CircuitElm e, int kind) {

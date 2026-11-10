@@ -1,4 +1,14 @@
 ### setuplist.txt first line must be a comment
++Everyday Circuits
+everyday-led-resistor.txt LED + Resistor
+everyday-transistor-switch.txt Transistor Switch (LED load)
+everyday-bridge-rectifier.txt Bridge Rectifier + Filter Cap
+everyday-zener-regulator.txt Zener Regulator 5.1 V
+everyday-linear-regulator-5v.txt 5 V Linear Regulator (7805-style)
+everyday-555-led-blinker.txt 555 LED Blinker
+everyday-pwm-rc-filter.txt PWM to DC (RC Filter)
+everyday-opamp-noninverting.txt Op-Amp Amplifier (Gain 11)
+-
 +Basics
 ohms.txt Ohm's Law
 resistors.txt Resistors
