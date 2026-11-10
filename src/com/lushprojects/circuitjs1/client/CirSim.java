@@ -470,6 +470,7 @@ MouseOutHandler, MouseWheelHandler {
 	pasteItem.setEnabled(false);
 
 	m.addItem(menuItemWithShortcut("clone", LS("Duplicate"), LS("Ctrl-D"), new MyCommand("edit","duplicate")));
+	m.addItem(menuItemWithShortcut("cw", LS("Rotate 90°"), LS("Ctrl-R"), new MyCommand("edit","rotate")));
 
 	m.addSeparator();
 	m.addItem(selectAllItem = menuItemWithShortcut("select-all", LS("Select All"), LS("Ctrl-A"), new MyCommand("edit","selectAll")));
@@ -478,6 +479,7 @@ MouseOutHandler, MouseWheelHandler {
 	m.addItem(menuItemWithShortcut("zoom-11", LS("Zoom 100%"), "0", new MyCommand("zoom", "zoom100")));
 	m.addItem(menuItemWithShortcut("zoom-in", LS("Zoom In"), "+", new MyCommand("zoom", "zoomin")));
 	m.addItem(menuItemWithShortcut("zoom-out", LS("Zoom Out"), "-", new MyCommand("zoom", "zoomout")));
+	m.addItem(menuItemWithShortcut("", LS("Keyboard Shortcuts..."), "?", new MyCommand("edit","keys")));
 	menuBar.addItem(LS("Edit"),m);
 
 	MenuBar drawMenuBar = new MenuBar(true);
@@ -681,6 +683,7 @@ MouseOutHandler, MouseWheelHandler {
 	elmMenuBar.addItem(elmDeleteMenuItem = new MenuItem(LS("Delete"),new MyCommand("elm","delete")));
 	elmMenuBar.addItem(                    new MenuItem(LS("Duplicate"),new MyCommand("elm","duplicate")));
 	elmMenuBar.addItem(elmFlipMenuItem = new MenuItem(LS("Swap Terminals"),new MyCommand("elm","flip")));
+	elmMenuBar.addItem(new MenuItem(LS("Rotate 90°"), new MyCommand("elm","rotate")));
 	elmMenuBar.addItem(elmSplitMenuItem = menuItemWithShortcut("", LS("Split Wire"), LS(ctrlMetaKey + "-click"), new MyCommand("elm","split")));
 	elmMenuBar.addItem(elmSliderMenuItem = new MenuItem(LS("Sliders..."),new MyCommand("elm","sliders")));
 
@@ -962,6 +965,7 @@ MouseOutHandler, MouseWheelHandler {
     	
     	MenuBar outputMenuBar = new MenuBar(true);
     	outputMenuBar.addItem(getClassCheckItem(LS("Add Analog Output"), "OutputElm"));
+	outputMenuBar.addItem(getClassCheckItem(LS("Add Oscilloscope Probe"), "ScopeProbeElm"));
     	outputMenuBar.addItem(getClassCheckItem(LS("Add LED"), "LEDElm"));
     	outputMenuBar.addItem(getClassCheckItem(LS("Add Lamp"), "LampElm"));
     	outputMenuBar.addItem(getClassCheckItem(LS("Add Text"), "TextElm"));
@@ -2065,6 +2069,9 @@ MouseOutHandler, MouseWheelHandler {
     // analyze the circuit when something changes, so it can be simulated
     void analyzeCircuit() {
 	WaveformViewer.prune(this);
+	for (int pi = 0; pi != elmList.size(); pi++)
+	    if (getElm(pi) instanceof ScopeProbeElm)
+		((ScopeProbeElm) getElm(pi)).invalidateTarget();
 	if (elmList.isEmpty()) {
 	    postDrawList = new Vector<Point>();
 	    badConnectionList = new Vector<Point>();
@@ -3022,6 +3029,12 @@ MouseOutHandler, MouseWheelHandler {
     		    scopes[i].speed = scopes[i-1].speed;
     	}
     	
+    	if (item=="rotate")
+    	    doRotate(menu=="elm" ? menuElm : mouseElm);
+    	if (item=="keys") {
+    	    dialogShowing = new KeysDialog(this);
+    	    dialogShowing.show();
+    	}
     	if (item=="wvVolt" && menuElm != null)
     	    WaveformViewer.addProbe(menuElm, WaveformViewer.KIND_VOLTAGE);
     	if (item=="wvCur" && menuElm != null)
@@ -3416,6 +3429,10 @@ MouseOutHandler, MouseWheelHandler {
     	currentMenuBar=new MenuBar(true);
     	currentMenuBar.setAutoOpen(true);
     	menuBar.addItem(LS("Circuits"), currentMenuBar);
+    	MenuBar helpMenu = new MenuBar(true);
+    	helpMenu.addItem(menuItemWithShortcut("", LS("Keyboard Shortcuts..."), "?", new MyCommand("edit","keys")));
+    	helpMenu.addItem(new MenuItem(LS("About..."), new MyCommand("file","about")));
+    	menuBar.addItem(LS("Help"), helpMenu);
     	stack[stackptr++] = currentMenuBar;
     	int p;
     	for (p = 0; p < len; ) {
@@ -3932,6 +3949,53 @@ MouseOutHandler, MouseWheelHandler {
     	needAnalyze();
     }
     
+    // rotate the selection (or the given part if nothing is selected) 90 degrees clockwise
+    void doRotate(CircuitElm fallback) {
+	Vector<CircuitElm> list = new Vector<CircuitElm>();
+	for (int i = 0; i != elmList.size(); i++)
+	    if (getElm(i).isSelected())
+		list.add(getElm(i));
+	if (list.isEmpty() && fallback != null)
+	    list.add(fallback);
+	if (list.isEmpty())
+	    return;
+	pushUndo();
+	int minx = Integer.MAX_VALUE, miny = Integer.MAX_VALUE, maxx = Integer.MIN_VALUE, maxy = Integer.MIN_VALUE;
+	for (CircuitElm ce : list) {
+	    minx = min(minx, min(ce.x, ce.x2)); maxx = max(maxx, max(ce.x, ce.x2));
+	    miny = min(miny, min(ce.y, ce.y2)); maxy = max(maxy, max(ce.y, ce.y2));
+	}
+	// centre on the grid so rotated points stay on the grid
+	int cx = snapGrid((minx+maxx)/2), cy = snapGrid((miny+maxy)/2);
+	for (CircuitElm ce : list) {
+	    if (ce instanceof ChipElm || ce instanceof TextElm || ce instanceof ScopeElm) {
+		// no rotated drawing for these: keep orientation, move with the group
+		ce.move((cx-(ce.y-cy)) - ce.x, (cy+(ce.x-cx)) - ce.y);
+	    } else
+		ce.setPosition(cx-(ce.y-cy), cy+(ce.x-cx), cx-(ce.y2-cy), cy+(ce.x2-cx));
+	}
+	needAnalyze();
+	unsavedChanges = true;
+    }
+
+    // scope probes share one scope, one colored channel each
+    void addToProbeScope(CircuitElm ce) {
+	for (int i = 0; i != scopeCount; i++)
+	    for (int j = 0; j != scopes[i].plots.size(); j++)
+		if (scopes[i].plots.get(j).elm instanceof ScopeProbeElm) {
+		    scopes[i].addElm(ce);
+		    return;
+		}
+	if (scopeCount == scopes.length)
+	    return;
+	int i = scopeCount++;
+	scopes[i] = new Scope(this);
+	scopes[i].position = i;
+	scopes[i].setElm(ce);
+	if (i > 0)
+	    scopes[i].speed = scopes[i-1].speed;
+    }
+
     void doSplit(CircuitElm ce) {
 	int x = snapGrid(inverseTransformX(menuX));
 	int y = snapGrid(inverseTransformY(menuY));
@@ -4109,6 +4173,13 @@ MouseOutHandler, MouseWheelHandler {
     				}
     			}
     		} // for
+    		// scope probes sit on top of wires: grab the probe, not the wire under its tip
+    		for (i = 0; i != elmList.size(); i++) {
+    			CircuitElm ce = getElm(i);
+    			if (ce instanceof ScopeProbeElm && (ce.boundingBox.contains(gx, gy) ||
+    				ce.getHandleGrabbedClose(gx, gy, POSTGRABSQ, 0) >= 0))
+    			    newMouseElm = ce;
+    		}
     	}
     	scopeSelected = -1;
     	if (newMouseElm == null) {
@@ -4971,9 +5042,18 @@ MouseOutHandler, MouseWheelHandler {
     				menuPerformed("key", "selectAll");
     				e.cancel();
     			}
+    			if (code=='R') {
+    				menuPerformed("key", "rotate");
+    				e.cancel();
+    			}
     		}
     	}
     	if ((t&Event.ONKEYPRESS)!=0) {
+    		if (cc=='?') {
+    			menuPerformed("key", "keys");
+    			e.cancel();
+    			return;
+    		}
     		if (cc>32 && cc<127){
     			String c=shortcuts[cc];
     			e.cancel();
@@ -5143,6 +5223,7 @@ MouseOutHandler, MouseWheelHandler {
     	case 'L': return new LogicInputElm(x1, y1, x2, y2, f, st);
     	case 'M': return new LogicOutputElm(x1, y1, x2, y2, f, st);
     	case 'O': return new OutputElm(x1, y1, x2, y2, f, st);
+    	case 435: return new ScopeProbeElm(x1, y1, x2, y2, f, st);
     	case 'R': return new RailElm(x1, y1, x2, y2, f, st);
     	case 'S': return new Switch2Elm(x1, y1, x2, y2, f, st);
     	case 'T': return new TransformerElm(x1, y1, x2, y2, f, st);
@@ -5282,6 +5363,8 @@ MouseOutHandler, MouseWheelHandler {
     		return (CircuitElm) new PotElm(x1, y1);
     	if (n=="OutputElm")
     		return (CircuitElm) new OutputElm(x1, y1);
+    	if (n=="ScopeProbeElm")
+    		return (CircuitElm) new ScopeProbeElm(x1, y1);
     	if (n=="CurrentElm")
     		return (CircuitElm) new CurrentElm(x1, y1);
     	if (n=="ProbeElm")

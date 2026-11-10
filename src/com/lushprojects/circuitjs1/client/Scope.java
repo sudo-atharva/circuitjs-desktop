@@ -452,7 +452,8 @@ class Scope {
 	    if (ce != null && !(ce instanceof OutputElm ||
 		    ce instanceof LogicOutputElm ||
 		    ce instanceof AudioOutputElm ||
-		    ce instanceof ProbeElm))
+		    ce instanceof ProbeElm ||
+		    ce instanceof ScopeProbeElm))
 		plots.add(new ScopePlot(ce, UNITS_A, VAL_CURRENT, getManScaleFromMaxScale(UNITS_A, false)));
 	} else {
 	    int u = ce.getScopeUnits(val);

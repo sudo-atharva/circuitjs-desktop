@@ -134,6 +134,14 @@ cd desktop && npx @tauri-apps/cli@2 build
 GitHub Actions (`.github/workflows/build.yml`) builds the exe on every push; pushing a tag like
 `v0.1.0` attaches it to a GitHub release.
 
+### Editing help
+
+- **Rotate:** Ctrl+R (or right-click → Rotate 90°) rotates the selection, or the part under the mouse.
+- **Cheat sheet:** press `?` or Help → Keyboard Shortcuts.
+- **Oscilloscope probe:** press `h` (or Draw → Outputs → Add Oscilloscope Probe), click a wire and drag out the
+  handle. Each probe is a colored channel (CH1, CH2, ...) on one shared scope. Drag a probe anywhere, even while
+  the simulation runs, and the trace follows. A hollow tip with `?` means it touches nothing.
+
 ### MCP server (AI control)
 
 While the desktop app is running it serves MCP at `http://127.0.0.1:7432/mcp` (local only;
