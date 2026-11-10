@@ -2070,8 +2070,11 @@ MouseOutHandler, MouseWheelHandler {
     void analyzeCircuit() {
 	WaveformViewer.prune(this);
 	for (int pi = 0; pi != elmList.size(); pi++)
-	    if (getElm(pi) instanceof ScopeProbeElm)
+	    if (getElm(pi) instanceof ScopeProbeElm) {
 		((ScopeProbeElm) getElm(pi)).invalidateTarget();
+		// probes from a loaded/pasted circuit get their viewer channel too (no-op if present)
+		WaveformViewer.addPlot(getElm(pi), Scope.VAL_VOLTAGE, Scope.UNITS_V, false);
+	    }
 	if (elmList.isEmpty()) {
 	    postDrawList = new Vector<Point>();
 	    badConnectionList = new Vector<Point>();
@@ -3978,24 +3981,6 @@ MouseOutHandler, MouseWheelHandler {
 	}
 	needAnalyze();
 	unsavedChanges = true;
-    }
-
-    // scope probes share one scope, one colored channel each
-    void addToProbeScope(CircuitElm ce) {
-	for (int i = 0; i != scopeCount; i++)
-	    for (int j = 0; j != scopes[i].plots.size(); j++)
-		if (scopes[i].plots.get(j).elm instanceof ScopeProbeElm) {
-		    scopes[i].addElm(ce);
-		    return;
-		}
-	if (scopeCount == scopes.length)
-	    return;
-	int i = scopeCount++;
-	scopes[i] = new Scope(this);
-	scopes[i].position = i;
-	scopes[i].setElm(ce);
-	if (i > 0)
-	    scopes[i].speed = scopes[i-1].speed;
     }
 
     void doSplit(CircuitElm ce) {

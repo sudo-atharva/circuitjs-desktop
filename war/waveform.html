@@ -44,7 +44,7 @@ let geo = { L: 0, pw: 1, x0: 0, x1: 1 };
 const store = () => (window.opener && !window.opener.closed) ? window.opener.wv : null;
 const java = () => window.opener && !window.opener.closed && window.opener.wvJava;
 const traces = () => { const s = store(); return s ? s.order.map(id => s.traces[id]).filter(Boolean) : []; };
-const color = tr => COLORS[(tr.id - 1) % COLORS.length];
+const color = tr => tr.color || COLORS[(tr.id - 1) % COLORS.length];
 
 function fmt(v, u) {
   if (!isFinite(v)) return '—';

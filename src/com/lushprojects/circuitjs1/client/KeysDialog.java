@@ -26,7 +26,7 @@ public class KeysDialog extends DialogBox {
 	{ "Right-click a part", "Menu: edit, rotate, scope, waveform viewer..." },
 	{ "Ctrl+click a wire", "Split the wire" },
 	{ "Mouse wheel", "Zoom (over a part: change its value)" },
-	{ "Scope probe (key h)", "Click a wire, drag out the handle. Drag the tip anywhere, even while running" },
+	{ "Scope probe (key h)", "Click a wire, drag out the handle; it plots in the Waveform Viewer. Drag it anywhere, even while running" },
     };
 
     static String esc(String s) {

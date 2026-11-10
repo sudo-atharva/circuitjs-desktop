@@ -43,7 +43,12 @@ class WaveformViewer {
 	kinds.add(value);
 	units.add(unit);
 	ids.add(id);
-	jsAddTrace(id, UNIT_PREFIX[unit] + id + ": " + e.getScopeText(value), UNIT_TEXT[unit]);
+	String name = UNIT_PREFIX[unit] + id + ": " + e.getScopeText(value), color = null;
+	if (e instanceof ScopeProbeElm) {
+	    name = "CH" + ((ScopeProbeElm) e).channel;
+	    color = ((ScopeProbeElm) e).traceColor();
+	}
+	jsAddTrace(id, name, UNIT_TEXT[unit], color);
 	if (show)
 	    open();
 	return id;
@@ -117,8 +122,8 @@ class WaveformViewer {
 	CirSim.theSim.setSimRunning(false);
     }
 
-    static native void jsAddTrace(int id, String name, String unit) /*-{
-	if ($wnd.wv) $wnd.wv.add(id, name, unit);
+    static native void jsAddTrace(int id, String name, String unit, String color) /*-{
+	if ($wnd.wv) $wnd.wv.add(id, name, unit, color);
     }-*/;
 
     static native void jsPush(int id, double t, double v) /*-{
@@ -127,6 +132,13 @@ class WaveformViewer {
 
     static native void jsRemoveTrace(int id) /*-{
 	if ($wnd.wv) $wnd.wv.remove(id);
+    }-*/;
+
+    // open without stealing focus if it is already open (used while placing probes)
+    static native void openIfClosed() /*-{
+	var w = $wnd.wvWin;
+	if (!w || w.closed)
+	    $wnd.wvWin = $wnd.open("waveform.html", "waveform", "width=1000,height=600");
     }-*/;
 
     static native void open() /*-{

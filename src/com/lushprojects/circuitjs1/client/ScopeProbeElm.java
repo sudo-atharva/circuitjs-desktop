@@ -2,7 +2,7 @@ package com.lushprojects.circuitjs1.client;
 
 // Oscilloscope probe: drop its tip on any wire or terminal, even while the simulation runs.
 // It is not part of the circuit (no posts); it just reads the voltage to ground of
-// whatever its tip touches, and shows up as a channel in the probe scope.
+// whatever its tip touches, and shows up as a channel in the waveform viewer.
 class ScopeProbeElm extends CircuitElm {
     int channel;
     CircuitElm target;
@@ -27,7 +27,7 @@ class ScopeProbeElm extends CircuitElm {
     int getShortcut() { return 'h'; }
     int getPostCount() { return 0; }
 
-    // a new probe goes straight onto the probe scope
+    // a new probe becomes a channel of the waveform viewer (the big oscilloscope)
     void draggingDone() {
 	// next free channel number (not in the constructor: the menu builds probes before the circuit exists)
 	channel = 1;
@@ -36,7 +36,12 @@ class ScopeProbeElm extends CircuitElm {
 	    if (ce != this && ce instanceof ScopeProbeElm)
 		channel = Math.max(channel, ((ScopeProbeElm) ce).channel + 1);
 	}
-	sim.addToProbeScope(this);
+	WaveformViewer.addPlot(this, Scope.VAL_VOLTAGE, Scope.UNITS_V, false);
+	WaveformViewer.openIfClosed();
+	// back to select mode so the next drag moves the probe instead of adding another
+	sim.setMouseMode(CirSim.MODE_SELECT);
+	sim.mouseModeStr = "Select";
+	sim.tempMouseMode = CirSim.MODE_SELECT;
     }
 
     // tip moved or circuit changed: look up what the tip touches next time
@@ -90,22 +95,21 @@ class ScopeProbeElm extends CircuitElm {
     double getVoltageDiff() { return probeVoltage(); }
     String getScopeText(int v) { return "CH" + channel; }
 
-    // same color as this probe's trace on the scope
-    String traceColor() {
-	for (int i = 0; i != sim.scopeCount; i++)
-	    for (int j = 0; j != sim.scopes[i].plots.size(); j++) {
-		ScopePlot p = sim.scopes[i].plots.get(j);
-		if (p.elm == this && p.color != null)
-		    return p.color;
-	    }
-	return "#FFFF00";
-    }
+    // fixed per channel, like a bench scope (CH1 yellow, CH2 cyan, ...); same color in the viewer
+    static final String CH_COLORS[] = { "#FFD84A", "#22D3EE", "#F472B6", "#60A5FA",
+	    "#4ADE80", "#FB923C", "#A78BFA", "#F87171" };
+    String traceColor() { return CH_COLORS[(Math.max(channel, 1)-1) % CH_COLORS.length]; }
 
     void draw(Graphics g) {
 	boolean on = connected();
-	Color c = needsHighlight() ? selectColor : new Color(traceColor());
-	g.setColor(c);
+	// always the channel color (selection color would make CH1 look like CH2); white ring when selected
+	Color c = new Color(traceColor());
 	setBbox(point1, point2, 6);
+	if (needsHighlight()) {
+	    g.setColor(Color.white);
+	    g.fillOval(x-8, y-8, 16, 16);
+	}
+	g.setColor(c);
 	drawThickLine(g, point1, point2);
 	// tip: filled when touching a node, ring when floating
 	g.fillOval(x-5, y-5, 10, 10);

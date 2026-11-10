@@ -3,8 +3,8 @@
 window.wv = {
   traces: {}, order: [], version: 0,
   MAX: 2000000, // ponytail: halves resolution past 2M samples per trace; spill to disk if longer runs matter
-  add: function (id, name, unit) {
-    this.traces[id] = { id: id, name: name, unit: unit, t: [], v: [] };
+  add: function (id, name, unit, color) {
+    this.traces[id] = { id: id, name: name, unit: unit, color: color, t: [], v: [] };
     this.order.push(id);
     this.version++;
   },

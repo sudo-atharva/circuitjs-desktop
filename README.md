@@ -141,8 +141,8 @@ GitHub Actions (`.github/workflows/build.yml`) builds the exe on every push; pus
 - **Rotate:** Ctrl+R (or right-click → Rotate 90°) rotates the selection, or the part under the mouse.
 - **Cheat sheet:** press `?` or Help → Keyboard Shortcuts.
 - **Oscilloscope probe:** press `h` (or Draw → Outputs → Add Oscilloscope Probe), click a wire and drag out the
-  handle. Each probe is a colored channel (CH1, CH2, ...) on one shared scope. Drag a probe anywhere, even while
-  the simulation runs, and the trace follows. A hollow tip with `?` means it touches nothing.
+  handle. The Waveform Viewer opens and each probe is a colored channel there (CH1 yellow, CH2 cyan, CH3 magenta,
+  CH4 blue...). Drag a probe anywhere, even while the simulation runs, and its trace follows. A hollow tip with `?` means it touches nothing.
 
 ### MCP server (AI control)
 
