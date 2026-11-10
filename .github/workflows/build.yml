@@ -1,0 +1,47 @@
+name: Build Windows exe
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Compile Java to JS (GWT)
+        shell: bash
+        run: |
+          curl -sSL -o gwt.zip https://github.com/gwtproject/gwt/releases/download/2.12.2/gwt-2.12.2.zip
+          unzip -q gwt.zip
+          java -Xmx2g -cp "src;gwt-2.12.2/gwt-user.jar;gwt-2.12.2/gwt-dev.jar" \
+            com.google.gwt.dev.Compiler -war war -sourceLevel 1.8 \
+            com.lushprojects.circuitjs1.circuitjs1
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build exe
+        working-directory: desktop
+        run: cargo build --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: circuitjs-windows
+          path: desktop/target/release/circuitjs.exe
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: desktop/target/release/circuitjs.exe

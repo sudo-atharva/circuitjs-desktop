@@ -1,0 +1,18 @@
+[package]
+name = "circuitjs"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-2.0-or-later"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# custom-protocol = serve ../war embedded in the exe (no dev server)
+tauri = { version = "2", features = ["devtools", "custom-protocol"] }
+rfd = "0.15"
+
+[profile.release]
+lto = true
+opt-level = "s"
+strip = true
