@@ -66,7 +66,8 @@ fn main() {
             open_file,
             startup_file,
             toggle_devtools,
-            mcp::mcp_reply
+            mcp::mcp_reply,
+            mcp::mcp_set_enabled
         ])
         .manage(mcp::Pending::default())
         .setup(|app| {
@@ -97,11 +98,6 @@ fn main() {
                     }
                 })
                 .build()?;
-            let port = std::env::var("CIRCUITJS_MCP_PORT")
-                .ok()
-                .and_then(|p| p.parse().ok())
-                .unwrap_or(7432);
-            mcp::start(app.handle().clone(), port);
             Ok(())
         })
         .run(tauri::generate_context!())

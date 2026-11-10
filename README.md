@@ -1,6 +1,108 @@
-# CircuitJS1
+# CircuitJS Desktop
 
-## Introduction
+An interactive electronics simulator for Windows. Draw a circuit, watch the current flow, and probe it
+like a real bench: drop oscilloscope probes on any wire, freeze the screen, and measure with cursors.
+
+Based on [CircuitJS1](https://github.com/sharpie7/circuitjs1) by Paul Falstad and Iain Sharp, packaged as a
+small native app (Rust + Tauri, ~7 MB) with a big waveform viewer and other additions.
+
+![Circuit with two oscilloscope probes](docs/circuit-probes.png)
+![Waveform viewer with cursors and live measurements](docs/waveform-viewer.png)
+
+## Download
+
+Get the latest release from the [Releases page](https://github.com/sudo-atharva/circuitjs-desktop/releases):
+
+- `CircuitJS_1.0.0_x64-setup.exe`: installer (per user, no admin needed). Registers `.csim` files so they open on double-click.
+- `circuitjs.exe`: portable, no install.
+
+Needs Windows 10 or 11 (uses the built-in WebView2). The app is not code-signed yet, so Windows SmartScreen
+may warn the first time: click *More info → Run anyway*.
+
+## What it adds to CircuitJS
+
+- **Oscilloscope probes.** Press `h`, click a wire, drag out the handle. Each probe is a channel in the
+  Waveform Viewer with a fixed color (CH1 yellow, CH2 cyan, CH3 magenta, CH4 blue...). Drag a probe anywhere,
+  even while the circuit runs, and its trace follows. A hollow tip with `?` means it is not touching anything.
+- **Waveform Viewer**, a large LTspice-style plot window:
+  - live measurements per channel: peak-to-peak, min, max, average, RMS, frequency, duty cycle
+  - cursors A/B (click / right-click) with Δt, 1/Δt and the difference of each trace
+  - *Pause/Resume*, *Show last* timebase (e.g. `20m` for the last 20 ms, like a scope), zoom and pan
+  - *Run for*: transient run from t = 0 that stops at a set time
+  - *Export CSV*
+  - double-click any small scope to move its traces here, or right-click a part → *Plot Voltage/Current*
+- **`.csim` circuit files** with native Open/Save dialogs (old `.txt` circuits still open).
+- **Rotate** with Ctrl+R, and a **keyboard cheat sheet** (`?` or Help → Keyboard Shortcuts).
+- **Everyday Circuits** menu: LED + resistor, transistor switch, bridge rectifier, zener and 7805-style
+  regulators, 555 blinker, PWM filter, op-amp amplifier (also in [examples/](examples/)).
+- **Scope frequency readout fixed**: small scopes now show the frequency of slow and compressed signals too.
+- **MCP server (optional)** so AI assistants such as Claude can build and simulate circuits (see below).
+
+## Quick start
+
+1. Open **Circuits → Everyday Circuits → 555 LED Blinker** (or any example).
+2. Press `h`, click on a wire and drag a little to place probe CH1. The Waveform Viewer opens.
+3. Place a second probe somewhere else, then drag the probes around while it runs.
+4. In the viewer press **Pause**, click for cursor A, right-click for cursor B, and read the values below the plot.
+
+Press `?` for all keyboard shortcuts.
+
+## MCP server (AI control)
+
+Off by default. Turn it on in **Options → Enable MCP Server (AI control)**. While on, any program on this PC can
+drive the simulator through `http://127.0.0.1:7432/mcp` (not reachable from other machines; change the port with
+the `CIRCUITJS_MCP_PORT` environment variable). Add it to Claude Code with:
+
+```
+claude mcp add --transport http circuitjs http://127.0.0.1:7432/mcp
+```
+
+Tools: `list_examples`, `load_example`, `get_circuit`, `load_circuit`, `list_elements`,
+`simulate` (transient run with probes; returns min/max/avg/rms/frequency and a resampled waveform),
+`set_running`. Simulations requested over MCP run at full CPU speed. Keep the app window open (not minimized):
+Windows slows down hidden pages.
+
+## Known limitations
+
+- Probes measure voltage to ground only (no differential or current probe yet).
+- Chips (555, logic ICs) and text move when rotated but keep their orientation.
+- The Waveform Viewer records from when a trace is added; earlier history from a small scope is not copied.
+- Moving a part does not drag its wires along.
+
+## Building from source
+
+Needs JDK 11+, Rust and Node.js.
+
+```
+# 1. compile the Java simulator to JavaScript (download the GWT 2.12.2 SDK and unzip it next to the repo)
+java -cp "src;gwt-2.12.2/gwt-user.jar;gwt-2.12.2/gwt-dev.jar" com.google.gwt.dev.Compiler -war war -sourceLevel 1.8 com.lushprojects.circuitjs1.circuitjs1
+# 2. build the app
+cd desktop && npx @tauri-apps/cli@2 build
+# -> desktop/target/release/circuitjs.exe                           (portable)
+# -> desktop/target/release/bundle/nsis/CircuitJS_*_x64-setup.exe   (installer)
+```
+
+GitHub Actions (`.github/workflows/build.yml`) builds both on every push; pushing a tag like `v1.0.0`
+attaches them to a GitHub release.
+
+Layout: `src/` is the simulator (Java, compiled by GWT), `war/` the web page plus `waveform.html` (viewer) and
+`wvstore.js` (trace buffer), `desktop/` the Rust app (`main.rs` window and file dialogs, `mcp.rs` MCP server,
+`shim.js` / `mcp.js` page hooks).
+
+## License
+
+GPL-2.0-or-later, same as CircuitJS1 (see [COPYING.txt](COPYING.txt)). Credits for the original simulator and its
+contributors are in Help → About.
+
+---
+
+# Original CircuitJS1 README
+
+The upstream web version's documentation, kept for reference.
+
+## CircuitJS1
+
+### Introduction
 
 CircuitJS1 is an electronic circuit simulator that runs in the browser. It was originally written by Paul Falstad as a Java Applet. It was adapted by Iain Sharp to run in the browser using GWT.
 
@@ -11,7 +113,7 @@ For a hosted version of the application see:
 
 Thanks to: Edward Calver for 15 new components and other improvements; Rodrigo Hausen for file import/export and many other UI improvements; J. Mike Rollins for the Zener diode code; Julius Schmidt for the spark gap code and some examples; Dustin Soodak for help with the user interface improvements; Jacob Calvert for the T Flip Flop; Ben Hayden for scope spectrum; Thomas Reitinger, Krystian Sławiński, Usevalad Khatkevich, Lucio Sciamanna, Mauro Hemerly Gazzani, J. Miguel Silva, and Franck Viard for translations; Andre Adrian for improved emitter coupled oscillator; Felthry for many examples; Colin Howell for code improvements. LZString (c) 2013 pieroxy.
 
-## Building the web application
+### Building the web application
 
 The tools you will need to build the project are:
 
@@ -24,7 +126,7 @@ This repository is a project folder for your Eclipse project space. Once you hav
 
 GWT will build its output in to the "war" directory. In the "war" directory the file "iframe.html" is loaded as an iFrame in to the spare space at the bottom of the right hand pannel. It can be used for branding etc.
 
-## Deployment of the web application
+### Deployment of the web application
 
 * "GWT Compile Project..." as explained above. This will put the outputs in to the "war" directory in the Eclipse project folder. You then need to copy everything in the "war" directory, except the "WEB-INF" directory, on to your web server.
 * Customize the header of the file "circuitjs1.html" to include your tracking, favicon etc.
@@ -50,7 +152,7 @@ Just for reference the files should look like this
    +- setuplist.txt (index in to example circuit directory)
 ```
    
-## Embedding
+### Embedding
 
 You can link to the full page version of the application using the link shown above.
 
@@ -74,7 +176,7 @@ You can add query parameters to link to change the applications startup behaviou
 .../circuitjs.html?negativeColor=%23ff0000 // change negative voltage color
 .../circuitjs.html?hideInfoBox=<true|false>
 ```
-## Building an Electron application
+### Building an Electron application
 
 The [Electron](https://electronjs.org/) project allows web applications to be distributed as local executables for a variety of platforms. This repository contains the additional files needed to build circuitJS1 as an Electron application.
 
@@ -93,7 +195,7 @@ Known limitations of the Electron application:
 
 Thanks to @Immortalin for the initial work in applying Electron to CircuitJS1.
 
-## License
+### License
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -108,56 +210,3 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
-
-## Windows desktop app (Rust / Tauri)
-
-The `desktop/` folder is a small Rust app ([Tauri](https://tauri.app)) that embeds the compiled
-simulator into a single `circuitjs.exe` (~7 MB) using Windows' built-in WebView2. File Open/Save
-use native dialogs. Circuits save as `.csim` (same text format as before; `.txt` still opens).
-
-**Waveform viewer (LTspice-style):** right-click any wire or part → *Plot Voltage/Current in Waveform Viewer*
-(or *Scopes → Waveform Viewer...*). It records the whole run, not a rolling window. Drag to zoom, wheel to zoom,
-right-drag to pan, double-click to fit, click/right-click to place cursors A/B (shows Δt, 1/Δt, ΔV/ΔI).
-**Double-click any small scope** (or its menu → Open in Waveform Viewer) to send all its traces here.
-*Show last* sets a scope-style timebase (e.g. `20m`); *Pause/Resume* freezes the simulation so you can measure.
-*Run for* does a transient run from t=0 that stops at the given time. *Export CSV* saves the traces.
-
-Build locally (needs JDK 11+ and Rust):
-
-```
-# 1. compile Java -> JS (download GWT 2.12.2 SDK and unzip it next to the repo first)
-java -cp "src;gwt-2.12.2/gwt-user.jar;gwt-2.12.2/gwt-dev.jar" com.google.gwt.dev.Compiler -war war -sourceLevel 1.8 com.lushprojects.circuitjs1.circuitjs1
-# 2. build the exe
-cd desktop && npx @tauri-apps/cli@2 build
-# -> desktop/target/release/circuitjs.exe (portable)
-# -> desktop/target/release/bundle/nsis/CircuitJS_*_x64-setup.exe (installer, registers .csim files)
-```
-
-GitHub Actions (`.github/workflows/build.yml`) builds the exe on every push; pushing a tag like
-`v0.1.0` attaches it to a GitHub release.
-
-### Editing help
-
-- **Rotate:** Ctrl+R (or right-click → Rotate 90°) rotates the selection, or the part under the mouse.
-- **Cheat sheet:** press `?` or Help → Keyboard Shortcuts.
-- **Oscilloscope probe:** press `h` (or Draw → Outputs → Add Oscilloscope Probe), click a wire and drag out the
-  handle. The Waveform Viewer opens and each probe is a colored channel there (CH1 yellow, CH2 cyan, CH3 magenta,
-  CH4 blue...). Drag a probe anywhere, even while the simulation runs, and its trace follows. A hollow tip with `?` means it touches nothing.
-
-### MCP server (AI control)
-
-While the desktop app is running it serves MCP at `http://127.0.0.1:7432/mcp` (local only;
-change the port with the `CIRCUITJS_MCP_PORT` environment variable). Add it to Claude Code with:
-
-```
-claude mcp add --transport http circuitjs http://127.0.0.1:7432/mcp
-```
-
-Tools: `list_examples`, `load_example`, `get_circuit`, `load_circuit`, `list_elements`,
-`simulate` (transient run with probes; returns min/max/avg/rms/frequency and a resampled waveform),
-`set_running`. Simulations requested over MCP run at full CPU speed, then return to normal speed.
-Keep the app window open (not minimized): Windows slows down hidden web pages.
-
-### Everyday circuits
-
-See [examples/](examples/) or **Circuits → Everyday Circuits** in the app.

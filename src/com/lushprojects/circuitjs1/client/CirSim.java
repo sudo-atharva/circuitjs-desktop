@@ -122,6 +122,7 @@ MouseOutHandler, MouseWheelHandler {
     CheckboxMenuItem euroResistorCheckItem;
     CheckboxMenuItem euroGatesCheckItem;
     CheckboxMenuItem printableCheckItem;
+    CheckboxMenuItem mcpCheckItem;
     CheckboxMenuItem conventionCheckItem;
     CheckboxMenuItem noEditCheckItem;
     private Label powerLabel;
@@ -567,6 +568,16 @@ MouseOutHandler, MouseWheelHandler {
 	m.addItem(optionsItem = new CheckboxAlignedMenuItem(LS("Other Options..."), new MyCommand("options","other")));
 	if (isElectron())
 	    m.addItem(new CheckboxAlignedMenuItem(LS("Toggle Dev Tools"), new MyCommand("options","devtools")));
+	if (isElectron()) {
+	    // desktop app only; off by default because any local program could then drive the simulator
+	    m.addItem(mcpCheckItem = new CheckboxMenuItem(LS("Enable MCP Server (AI control)"),
+		new Command() { public void execute() {
+		    setOptionInStorage("mcpServer", mcpCheckItem.getState());
+		    setMcpEnabled(mcpCheckItem.getState());
+		}
+	    }));
+	    mcpCheckItem.setState(getOptionFromStorage("mcpServer", false));
+	}
 
 	mainMenuBar = new MenuBar(true);
 	mainMenuBar.setAutoOpen(true);
@@ -746,6 +757,8 @@ MouseOutHandler, MouseWheelHandler {
 	WaveformViewer.exportJS();
 	JsApi.export();
 	exportLoadHook();
+	if (mcpCheckItem != null && mcpCheckItem.getState())
+	    setMcpEnabled(true);
 	setSimRunning(running);
     }
 
@@ -2864,6 +2877,11 @@ MouseOutHandler, MouseWheelHandler {
         });
     }-*/;
     
+    static native void setMcpEnabled(boolean b) /*-{
+        if ($wnd.setMcpEnabled)
+            $wnd.setMcpEnabled(b);
+    }-*/;
+
     // lets the desktop app load a file it was launched with (double-clicked .csim)
     static native void exportLoadHook() /*-{
         $wnd.circuitjsLoad = $entry(function (text, name) {

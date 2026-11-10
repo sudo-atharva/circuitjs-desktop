@@ -58,6 +58,54 @@ class ScopePlot {
     double acLastOut = 0; // Store y[i-1] term for AC coupling filter
     
     final static int FLAG_AC=1;
+
+    // Frequency counter: rising crossings through a Schmitt trigger, timed in simulation
+    // time with interpolation. The old counter measured screen pixels, so it failed when a
+    // period was under 12 px or fewer than 2 periods were visible (e.g. below ~30 kHz).
+    double freqMid, freqHyst, freqPrevV, freqPrevT, freqLastCross = -1;
+    boolean freqHigh;
+    double freqPeriods[] = new double[8];
+    int freqPeriodCt;
+
+    void freqSample(double v, double t) {
+	if (t < freqPrevT) {  // simulation was reset
+	    freqPeriodCt = 0;
+	    freqLastCross = -1;
+	}
+	if (freqHyst > 0) {
+	    double hi = freqMid + freqHyst;
+	    if (!freqHigh && v > hi) {
+		freqHigh = true;
+		double tc = t;
+		if (v != freqPrevV && t > freqPrevT)
+		    tc = t - (t - freqPrevT) * (v - hi) / (v - freqPrevV);
+		if (freqLastCross >= 0 && tc > freqLastCross)
+		    freqPeriods[freqPeriodCt++ % freqPeriods.length] = tc - freqLastCross;
+		freqLastCross = tc;
+	    } else if (freqHigh && v < freqMid - freqHyst)
+		freqHigh = false;
+	}
+	freqPrevV = v;
+	freqPrevT = t;
+    }
+
+    // 0 if there is no stable periodic signal
+    double getFrequency() {
+	int n = Math.min(freqPeriodCt, freqPeriods.length);
+	if (n < 2)
+	    return 0;
+	double sum = 0, sum2 = 0;
+	for (int i = 0; i != n; i++) {
+	    sum += freqPeriods[i];
+	    sum2 += freqPeriods[i]*freqPeriods[i];
+	}
+	double avg = sum/n;
+	double std = Math.sqrt(Math.max(0, sum2/n - avg*avg));
+	// unstable, or the signal stopped switching
+	if (std > avg*.05 || CirSim.theSim.t - freqLastCross > avg*3)
+	    return 0;
+	return 1/avg;
+    }
     
     ScopePlot(CircuitElm e, int u) {
 	elm = e;
@@ -117,6 +165,7 @@ class ScopePlot {
 	acLastOut = newAcOut;
 	if (isAcCoupled())
 	    v = newAcOut;
+	freqSample(v, CirSim.theSim.t);
 	if (v < minValues[ptr])
 		minValues[ptr] = v;
 	if (v > maxValues[ptr])
@@ -1516,58 +1565,20 @@ class Scope {
 	}
     }
 
-    // calc frequency if possible and display it
+    // display frequency if the signal is periodic (counted in ScopePlot, in simulation time)
     void drawFrequency(Graphics g) {
-	// try to get frequency
-	// get average
-	double avg = 0;
-	int i;
 	ScopePlot plot = visiblePlots.firstElement();
-    	int ipa = plot.ptr+scopePointCount-rect.width;
-    	double minV[] = plot.minValues;
-    	double maxV[] = plot.maxValues;
-	for (i = 0; i != rect.width; i++) {
+	int ipa = plot.ptr+scopePointCount-rect.width;
+	double lo = Double.MAX_VALUE, hi = -Double.MAX_VALUE;
+	for (int i = 0; i != rect.width; i++) {
 	    int ip = (i+ipa) & (scopePointCount-1);
-	    avg += minV[ip]+maxV[ip];
+	    lo = Math.min(lo, plot.minValues[ip]);
+	    hi = Math.max(hi, plot.maxValues[ip]);
 	}
-	avg /= i*2;
-	int state = 0;
-	double thresh = avg*.05;
-	int oi = 0;
-	double avperiod = 0;
-	int periodct = -1;
-	double avperiod2 = 0;
-	// count period lengths
-	for (i = 0; i != rect.width; i++) {
-	    int ip = (i+ipa) & (scopePointCount-1);
-	    double q = maxV[ip]-avg;
-	    int os = state;
-	    if (q < thresh)
-		state = 1;
-	    else if (q > -thresh)
-		state = 2;
-	    if (state == 2 && os == 1) {
-		int pd = i-oi;
-		oi = i;
-		// short periods can't be counted properly
-		if (pd < 12)
-		    continue;
-		// skip first period, it might be too short
-		if (periodct >= 0) {
-		    avperiod += pd;
-		    avperiod2 += pd*pd;
-		}
-		periodct++;
-	    }
-	}
-	avperiod /= periodct;
-	avperiod2 /= periodct;
-	double periodstd = Math.sqrt(avperiod2-avperiod*avperiod);
-	double freq = 1/(avperiod*sim.maxTimeStep*speed);
-	// don't show freq if standard deviation is too great
-	if (periodct < 1 || periodstd > 2)
-	    freq = 0;
-	// System.out.println(freq + " " + periodstd + " " + periodct);
+	// trigger levels from what is on screen: middle, with 10% hysteresis
+	plot.freqMid = (hi+lo)/2;
+	plot.freqHyst = (hi-lo > 1e-12) ? (hi-lo)*.1 : 0;
+	double freq = plot.getFrequency();
 	if (freq != 0)
 	    drawInfoText(g, CircuitElm.getUnitText(freq, "Hz"));
     }

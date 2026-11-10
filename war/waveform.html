@@ -114,6 +114,43 @@ function updateLegend(trs) {
   }
 }
 
+// stats over the visible samples (time-weighted, so variable time steps don't skew them)
+function measure(tr) {
+  const t = tr.t, v = tr.v, i0 = tr._i0, i1 = tr._i1;
+  if (!(i1 - i0 >= 2)) return null;
+  let lo = Infinity, hi = -Infinity, area = 0, area2 = 0, T = 0;
+  for (let i = i0; i < i1; i++) {
+    if (v[i] < lo) lo = v[i];
+    if (v[i] > hi) hi = v[i];
+    if (i > i0) {
+      const dt = t[i] - t[i - 1];
+      area += (v[i] + v[i - 1]) / 2 * dt;
+      area2 += (v[i] * v[i] + v[i - 1] * v[i - 1]) / 2 * dt;
+      T += dt;
+    }
+  }
+  if (!(T > 0)) return null;
+  // frequency + duty: rising crossings through a Schmitt trigger at mid +- 10% of p-p
+  const mid = (lo + hi) / 2, h = (hi - lo) * 0.1;
+  let high = v[i0] > mid, above = 0, first = null, last = null, aboveFirst = 0, aboveLast = 0, n = 0;
+  for (let i = i0 + 1; h > 0 && i < i1; i++) {
+    const dt = t[i] - t[i - 1];
+    if (v[i] > mid) above += dt;
+    if (!high && v[i] > mid + h) {
+      high = true;
+      const tc = t[i] - dt * (v[i] - mid - h) / (v[i] - v[i - 1]);
+      if (first === null) { first = tc; aboveFirst = above; }
+      last = tc; aboveLast = above; n++;
+    } else if (high && v[i] < mid - h) high = false;
+  }
+  const periods = n - 1, span = last - first;
+  return {
+    lo, hi, avg: area / T, rms: Math.sqrt(area2 / T),
+    freq: periods >= 1 && span > 0 ? periods / span : null,
+    duty: periods >= 1 && span > 0 ? (aboveLast - aboveFirst) / span : null
+  };
+}
+
 function draw() {
   const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
   if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
@@ -226,8 +263,17 @@ function draw() {
   }
   ctx.restore();
 
-  // readout
+  // readout: live measurements over the visible range, like a bench scope's Measure menu
   let out = '';
+  for (const tr of trs) {
+    const m = measure(tr), u = tr.unit;
+    if (!m) continue;
+    out += (out ? '\n' : '') + tr.name.padEnd(14).slice(0, 14) +
+      '  pp ' + fmt(m.hi - m.lo, u).padEnd(10) + ' min ' + fmt(m.lo, u).padEnd(10) + ' max ' + fmt(m.hi, u).padEnd(10) +
+      ' avg ' + fmt(m.avg, u).padEnd(10) + ' rms ' + fmt(m.rms, u).padEnd(10) +
+      ' f ' + (m.freq ? fmt(m.freq, 'Hz') : '—').padEnd(10) + ' duty ' + (m.duty != null ? (m.duty * 100).toFixed(1) + '%' : '—');
+  }
+  if (out) out += '\n';
   if (curA !== null || curB !== null) {
     out += 'A: ' + (curA !== null ? fmt(curA, 's') : '—') + '    B: ' + (curB !== null ? fmt(curB, 's') : '—');
     if (curA !== null && curB !== null) {
@@ -239,7 +285,7 @@ function draw() {
       out += '\n' + tr.name.padEnd(32).slice(0, 32) + '  A = ' + fmt(a, tr.unit).padEnd(12) + '  B = ' + fmt(b, tr.unit).padEnd(12) +
              (isFinite(a) && isFinite(b) ? '  Δ = ' + fmt(b - a, tr.unit) : '');
     }
-  } else out = 'Click the plot to place cursor A, right-click for cursor B.';
+  } else out += 'Click the plot to place cursor A, right-click for cursor B.';
   if ($('readout').textContent !== out) $('readout').textContent = out;
 }
 

@@ -4,12 +4,34 @@
 
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{mpsc, Mutex};
 use std::time::Duration;
 use tauri::{AppHandle, Manager};
 
 type Reply = Result<String, String>;
+
+static ENABLED: AtomicBool = AtomicBool::new(false);
+static STARTED: AtomicBool = AtomicBool::new(false);
+
+/// Options > Enable MCP Server. Off by default: while on, any local program can drive the simulator.
+// ponytail: turning it off refuses calls (403) but keeps the port bound until the app exits.
+#[tauri::command]
+pub fn mcp_set_enabled(app: AppHandle, enabled: bool) -> Result<(), String> {
+    ENABLED.store(enabled, Ordering::Relaxed);
+    if enabled && !STARTED.swap(true, Ordering::Relaxed) {
+        let port = std::env::var("CIRCUITJS_MCP_PORT")
+            .ok()
+            .and_then(|p| p.parse().ok())
+            .unwrap_or(7432);
+        if let Err(e) = start(app, port) {
+            STARTED.store(false, Ordering::Relaxed);
+            ENABLED.store(false, Ordering::Relaxed);
+            return Err(format!("MCP server could not start on port {port}: {e}"));
+        }
+    }
+    Ok(())
+}
 
 #[derive(Default)]
 pub struct Pending(Mutex<HashMap<u64, mpsc::Sender<Reply>>>);
@@ -54,18 +76,16 @@ fn tools() -> Value {
     ])
 }
 
-pub fn start(app: AppHandle, port: u16) {
+fn start(app: AppHandle, port: u16) -> Result<(), String> {
+    let server = tiny_http::Server::http(("127.0.0.1", port)).map_err(|e| e.to_string())?;
     std::thread::spawn(move || {
-        let server = match tiny_http::Server::http(("127.0.0.1", port)) {
-            Ok(s) => s,
-            Err(e) => return eprintln!("MCP server could not start on port {port}: {e}"),
-        };
         for req in server.incoming_requests() {
             let app = app.clone();
             // own thread per request: a long simulate() must not block other calls
             std::thread::spawn(move || handle(&app, req));
         }
     });
+    Ok(())
 }
 
 fn respond(req: tiny_http::Request, status: u16, body: Option<Value>) {
@@ -85,7 +105,7 @@ fn handle(app: &AppHandle, mut req: tiny_http::Request) {
             !(o.starts_with("http://127.0.0.1") || o.starts_with("http://localhost"))
         }
     });
-    if bad_origin {
+    if bad_origin || !ENABLED.load(Ordering::Relaxed) {
         return respond(req, 403, None);
     }
     if req.url() != "/mcp" {
