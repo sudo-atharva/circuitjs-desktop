@@ -41,6 +41,7 @@ public class ScopePopupMenu {
 	 m.addItem(removeScopeItem = new CheckboxAlignedMenuItem(CirSim.LS("Remove Scope"),new MyCommand("scopepop", "remove")));
 	 m.addItem(dockItem = new CheckboxAlignedMenuItem(CirSim.LS("Dock Scope"),new MyCommand("scopepop", "dock")));
 	 m.addItem(undockItem = new CheckboxAlignedMenuItem(CirSim.LS("Undock Scope"),new MyCommand("scopepop", "undock")));
+	 m.addItem(new CheckboxAlignedMenuItem(CirSim.LS("Open in Waveform Viewer (double-click)"), new MyCommand("scopepop", "waveform")));
 	 m.addItem(maxScaleItem = new CheckboxMenuItem(CirSim.LS("Max Scale"), new MyCommand("scopepop", "maxscale")));
 	 m.addItem(stackItem = new CheckboxAlignedMenuItem(CirSim.LS("Stack"), new MyCommand("scopepop", "stack")));
 	 m.addItem(unstackItem = new CheckboxAlignedMenuItem(CirSim.LS("Unstack"), new MyCommand("scopepop", "unstack")));

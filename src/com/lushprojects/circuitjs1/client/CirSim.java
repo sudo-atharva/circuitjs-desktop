@@ -3099,6 +3099,8 @@ MouseOutHandler, MouseWheelHandler {
 //    			scopes[menuScope].adjustScale(.5);
     		if (item=="maxscale")
     			s.maxScale();
+    		if (item=="waveform")
+    			WaveformViewer.openScope(s);
     		if (item=="stack")
     			stackScope(menuScope);
     		if (item=="unstack")
@@ -4354,6 +4356,15 @@ MouseOutHandler, MouseWheelHandler {
     
     public void onDoubleClick(DoubleClickEvent e){
     	e.preventDefault();
+    	// double-click a small scope: open its traces in the big waveform viewer
+    	if (scopeSelected != -1) {
+    	    WaveformViewer.openScope(scopes[scopeSelected]);
+    	    return;
+    	}
+    	if (mouseElm instanceof ScopeElm) {
+    	    WaveformViewer.openScope(((ScopeElm) mouseElm).elmScope);
+    	    return;
+    	}
  //   	if (!didSwitch && mouseElm != null)
     	if (mouseElm != null && !(mouseElm instanceof SwitchElm) && !noEditCheckItem.getState())
     		doEdit(mouseElm);

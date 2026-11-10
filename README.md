@@ -118,6 +118,8 @@ use native dialogs. Circuits save as `.csim` (same text format as before; `.txt`
 **Waveform viewer (LTspice-style):** right-click any wire or part → *Plot Voltage/Current in Waveform Viewer*
 (or *Scopes → Waveform Viewer...*). It records the whole run, not a rolling window. Drag to zoom, wheel to zoom,
 right-drag to pan, double-click to fit, click/right-click to place cursors A/B (shows Δt, 1/Δt, ΔV/ΔI).
+**Double-click any small scope** (or its menu → Open in Waveform Viewer) to send all its traces here.
+*Show last* sets a scope-style timebase (e.g. `20m`); *Pause/Resume* freezes the simulation so you can measure.
 *Run for* does a transient run from t=0 that stops at the given time. *Export CSV* saves the traces.
 
 Build locally (needs JDK 11+ and Rust):

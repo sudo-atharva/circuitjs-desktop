@@ -22,10 +22,11 @@
 <div id="bar">
   Run for <input id="stop" value="10m" size="7" title="Stop time in seconds, e.g. 10m, 500u, 2"> s
   <button id="run">Run</button>
-  <button id="halt">Stop</button>
+  <button id="halt">Pause</button>
+  &nbsp; Show last <input id="win" placeholder="all" size="6" title="Time window like a scope timebase, e.g. 20m. Empty = whole run"> s
   <button id="fit">Fit</button>
   <button id="csv">Export CSV</button>
-  <span id="help">drag: zoom &middot; wheel: zoom &middot; right-drag: pan &middot; click: cursor A &middot; right-click: cursor B &middot; double-click: fit</span>
+  <span id="help">double-click a small scope to send it here &middot; drag: zoom &middot; wheel: zoom &middot; right-drag: pan &middot; click: cursor A &middot; right-click: cursor B &middot; double-click: fit</span>
 </div>
 <div id="legend"></div>
 <div id="plot"><canvas id="cv"></canvas></div>
@@ -81,6 +82,11 @@ function fullRange(trs) {
   if (!isFinite(x0)) return { x0: 0, x1: 1e-3 };
   return { x0: x0, x1: x1 > x0 ? x1 : x0 + 1e-3 };
 }
+// auto view: whole run, or the last N seconds (scope-style timebase)
+function followRange(trs) {
+  const r = fullRange(trs), w = parseSI($('win').value);
+  return w > 0 ? { x0: Math.max(r.x0, r.x1 - w), x1: Math.max(r.x1, r.x0 + w) } : r;
+}
 const pxToX = px => geo.x0 + (px - geo.L) / geo.pw * (geo.x1 - geo.x0);
 
 function updateLegend(trs) {
@@ -119,7 +125,7 @@ function draw() {
 
   const trs = traces();
   updateLegend(trs);
-  const { x0, x1 } = view || fullRange(trs);
+  const { x0, x1 } = view || followRange(trs);
   const units = [...new Set(trs.map(t => t.unit))];
   const left = units.includes('V') ? 'V' : (units[0] || 'V');
   const right = units.find(u => u !== left);
@@ -238,7 +244,9 @@ function draw() {
 }
 
 function loop() {
-  const s = store(), ver = s ? s.version : -1;
+  const s = store(), ver = s ? s.version : -1, j = java();
+  const label = j && j.running && !j.running() ? 'Resume' : 'Pause';
+  if ($('halt').textContent !== label) $('halt').textContent = label;
   if (ver !== lastVer || dirty) { lastVer = ver; dirty = false; draw(); }
   requestAnimationFrame(loop);
 }
@@ -286,7 +294,12 @@ $('run').onclick = () => {
   if (!(s > 0)) { alert('Enter a stop time like 10m, 500u or 2'); return; }
   if (j) { view = null; curA = curB = null; j.run(s); }
 };
-$('halt').onclick = () => { const j = java(); if (j) j.stop(); };
+$('halt').onclick = () => {
+  const j = java();
+  if (!j) return;
+  if (j.running && !j.running()) j.resume(); else j.stop();
+};
+$('win').addEventListener('input', () => { dirty = true; });
 $('stop').addEventListener('keydown', e => { if (e.key === 'Enter') $('run').click(); });
 $('csv').onclick = () => {
   const trs = traces();
