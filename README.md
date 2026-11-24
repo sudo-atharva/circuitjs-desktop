@@ -128,6 +128,9 @@ simulation **time step**, not the screen. Measured with a 1 V sine at the defaul
 - **Max:** frequency reads exactly up to about 1 / (3.3 × time step): 60 kHz at 5 µs, 300 kHz at 1 µs (measured).
   For waveforms whose *shape* matters, stay at 20+ samples per cycle (about 10 kHz at 5 µs).
   Set a smaller time step in Options → Other Options for faster circuits; the simulation then runs slower.
+- **Square waves / PWM:** the small scopes time up to 64 periods from the first edge to the last, so edges that
+  fall between time steps no longer matter: every frequency from 1 to 60 kHz reads within 0.3 % at 5 µs
+  (checked 1 kHz at a time; before, many between 21 and 60 kHz showed nothing and lower ones were up to 1 % off).
 - **Min:** no hard limit. The counter needs about 2 full cycles in view: widen the Viewer's *Show last*, slow the
   small scope, or use a longer *Run for* time. Above the limit it shows nothing rather than a wrong number.
 

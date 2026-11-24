@@ -62,16 +62,17 @@ class ScopePlot {
     // Frequency counter: rising crossings through a Schmitt trigger, timed in simulation
     // time with interpolation. The old counter measured screen pixels, so it failed when a
     // period was under 12 px or fewer than 2 periods were visible (e.g. below ~30 kHz).
-    double freqMid, freqHyst, freqPrevV, freqPrevT, freqLastCross = -1;
+    // Rising crossings are kept (up to 64) and the frequency is (crossings - 1) / (last - first), so the
+    // time-step jitter of each edge only counts at the two ends: square waves whose period is not a whole
+    // number of time steps (e.g. 27 kHz at 5 us) read correctly instead of being rejected as unstable.
+    double freqMid, freqHyst, freqPrevV, freqPrevT;
     boolean freqHigh;
-    double freqPeriods[] = new double[8];
-    int freqPeriodCt;
+    double freqCross[] = new double[64];
+    int freqCrossCt;
 
     void freqSample(double v, double t) {
-	if (t < freqPrevT) {  // simulation was reset
-	    freqPeriodCt = 0;
-	    freqLastCross = -1;
-	}
+	if (t < freqPrevT)  // simulation was reset
+	    freqCrossCt = 0;
 	if (freqHyst > 0) {
 	    double hi = freqMid + freqHyst;
 	    if (!freqHigh && v > hi) {
@@ -79,9 +80,8 @@ class ScopePlot {
 		double tc = t;
 		if (v != freqPrevV && t > freqPrevT)
 		    tc = t - (t - freqPrevT) * (v - hi) / (v - freqPrevV);
-		if (freqLastCross >= 0 && tc > freqLastCross)
-		    freqPeriods[freqPeriodCt++ % freqPeriods.length] = tc - freqLastCross;
-		freqLastCross = tc;
+		if (freqCrossCt == 0 || tc > freqCross[(freqCrossCt - 1) % freqCross.length])
+		    freqCross[freqCrossCt++ % freqCross.length] = tc;
 	    } else if (freqHigh && v < freqMid - freqHyst)
 		freqHigh = false;
 	}
@@ -89,24 +89,33 @@ class ScopePlot {
 	freqPrevT = t;
     }
 
+    double freqCrossing(int k) { return freqCross[k % freqCross.length]; }
+
     // 0 if there is no stable periodic signal
     double getFrequency() {
-	int n = Math.min(freqPeriodCt, freqPeriods.length);
-	if (n < 2)
+	int n = Math.min(freqCrossCt, freqCross.length);
+	if (n < 3)
 	    return 0;
-	double sum = 0, sum2 = 0;
-	for (int i = 0; i != n; i++) {
-	    sum += freqPeriods[i];
-	    sum2 += freqPeriods[i]*freqPeriods[i];
+	int first = freqCrossCt - n, mid = first + (n - 1) / 2, last = freqCrossCt - 1;
+	double avg = (freqCrossing(last) - freqCrossing(first)) / (n - 1);
+	// stable: the first and second half give the same period, within 3 % plus one time step of edge
+	// jitter at each end of each half
+	int n1 = mid - first, n2 = last - mid;
+	double p1 = (freqCrossing(mid) - freqCrossing(first)) / n1, p2 = (freqCrossing(last) - freqCrossing(mid)) / n2;
+	double dt = CirSim.theSim.maxTimeStep;
+	if (Math.abs(p1 - p2) > avg * .03 + 2 * dt / n1 + 2 * dt / n2) {
+	    // the frequency changed: forget the older crossings so the new one shows up quickly
+	    freqCross[0] = freqCrossing(last - 1);
+	    freqCross[1] = freqCrossing(last);
+	    freqCrossCt = 2;
+	    return 0;
 	}
-	double avg = sum/n;
-	double std = Math.sqrt(Math.max(0, sum2/n - avg*avg));
-	// unstable, or the signal stopped switching
-	if (std > avg*.05 || CirSim.theSim.t - freqLastCross > avg*3)
+	// the signal stopped switching
+	if (CirSim.theSim.t - freqCrossing(last) > avg * 3)
 	    return 0;
-	return 1/avg;
+	return 1 / avg;
     }
-    
+
     ScopePlot(CircuitElm e, int u) {
 	elm = e;
 	units = u;
