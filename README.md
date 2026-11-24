@@ -6,6 +6,9 @@ like a real bench: drop oscilloscope probes on any wire, freeze the screen, and 
 Based on [CircuitJS1](https://github.com/sharpie7/circuitjs1) by Paul Falstad and Iain Sharp, packaged as a
 small native app (Rust + Tauri, ~7 MB) with a big waveform viewer and other additions.
 
+**Try it in the browser:** [everyday circuits gallery](https://sudo-atharva.github.io/circuitjs-desktop/): screenshots,
+how to use each one, and every circuit runs live.
+
 ![Circuit with two oscilloscope probes](docs/circuit-probes.png)
 ![Waveform viewer with cursors and live measurements](docs/waveform-viewer.png)
 
