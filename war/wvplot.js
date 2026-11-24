@@ -76,9 +76,26 @@ function measure(tr) {
   const periods = n - 1, span = last - first;
   return {
     lo, hi, avg: area / T, rms: Math.sqrt(area2 / T),
+    rise: edgeTime(t, v, i0, i1, lo + (hi - lo) * 0.1, lo + (hi - lo) * 0.9),
+    fall: edgeTime(t, v, i0, i1, lo + (hi - lo) * 0.9, lo + (hi - lo) * 0.1),
     freq: periods >= 1 && span > 0 ? periods / span : null,
     duty: periods >= 1 && span > 0 ? (aboveLast - aboveFirst) / span : null
   };
+}
+
+// rise time (from < to) or fall time (from > to) of the first full edge in view: time from crossing
+// `from` to crossing `to`, interpolated between samples; null without a full edge
+function edgeTime(t, v, i0, i1, from, to) {
+  if (!(Math.abs(to - from) > 1e-12)) return null;
+  const up = to > from, past = (x, lvl) => (up ? x >= lvl : x <= lvl);
+  const cross = (i, lvl) => t[i - 1] + (t[i] - t[i - 1]) * (lvl - v[i - 1]) / (v[i] - v[i - 1]);
+  let start = null;
+  for (let i = i0 + 1; i < i1; i++) {
+    if (!past(v[i - 1], from) && past(v[i], from)) start = cross(i, from); // (re)start at each crossing of `from`
+    else if (start !== null && !past(v[i - 1], to) && past(v[i], to)) return cross(i, to) - start;
+    else if (start !== null && !past(v[i], from)) start = null; // fell back before reaching `to`
+  }
+  return null;
 }
 
 // Grid, axes (first unit left, second right) and traces for x0..x1 in a W x H (CSS px) area.

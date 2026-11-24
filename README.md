@@ -25,7 +25,9 @@ may warn the first time: click *More info → Run anyway*.
   Waveform Viewer with a fixed color (CH1 yellow, CH2 cyan, CH3 magenta, CH4 blue...). Drag a probe anywhere,
   even while the circuit runs, and its trace follows. A hollow tip with `?` means it is not touching anything.
 - **Waveform Viewer**, a large LTspice-style plot window:
-  - live measurements per channel: peak-to-peak, min, max, average, RMS, frequency, duty cycle
+  - live measurements per channel: peak-to-peak, min, max, average, RMS, frequency, duty cycle, rise / fall time
+    (10-90 %) and slew rate
+  - slope at a cursor and slope between cursors A and B (V/s or A/s)
   - cursors A/B (click / right-click) with Δt, 1/Δt and the difference of each trace
   - *Pause/Resume*, *Show last* timebase (e.g. `20m` for the last 20 ms, like a scope), zoom and pan
   - *Run for*: transient run from t = 0 that stops at a set time
@@ -33,8 +35,10 @@ may warn the first time: click *More info → Run anyway*.
   - double-click any small scope to move its traces here, or right-click a part → *Plot Voltage/Current*
 - **`.csim` circuit files** with native Open/Save dialogs (old `.txt` circuits still open).
 - **Rotate** with Ctrl+R, and a **keyboard cheat sheet** (`?` or Help → Keyboard Shortcuts).
-- **Everyday Circuits** menu: LED + resistor, transistor switch, bridge rectifier, zener and 7805-style
-  regulators, 555 blinker, PWM filter, op-amp amplifier (also in [examples/](examples/)).
+- **Everyday Circuits** menu: LED + resistor, NPN and PNP switches, optocoupler 24 V input, short-circuit protection
+  (current limit + fuse), 74HC165 + 74HC595 with an MCU, bridge rectifier, zener and 7805-style regulators,
+  555 blinker, PWM filter, op-amp amplifier (also in [examples/](examples/)). Online gallery with screenshots, each
+  circuit runnable in the browser: built by `.github/workflows/pages.yml` from [docs/gallery/](docs/gallery/).
 - **Scope frequency readout fixed**: small scopes now show the frequency of slow and compressed signals too.
 - **Datasheet / PDF export** (File → Export Datasheet, or the *Datasheet / PDF* button in the Waveform Viewer):
   an A4 datasheet with title block (doc no., revision, author, optional logo), description, black-and-white
@@ -42,6 +46,16 @@ may warn the first time: click *More info → Run anyway*.
   duty), a waveform figure per probe, bill of materials, simulation conditions and the circuit file as an appendix.
   Every text is editable before saving; *Save as PDF / Print* opens the print dialog (choose Microsoft Print to PDF).
   Measurements cover the time range shown in the Waveform Viewer.
+- **Microcontroller (MCU) block** (Digital Chips → Add Microcontroller): 8 pins and a small Arduino-like program
+  in its edit dialog: `P0 = 1`, `delay 500`, `if` / `while`, `pullup P1` for buttons, `A2` reads a pin's voltage
+  (e.g. a knob that sets the blink speed). See [war/mcu.html](war/mcu.html).
+- **74HC595 and 74HC165** (Digital Chips) with the real pins: SER / SCK / RCK / /CLR / /OE / Q0-Q7 / Q7' (output
+  latch, tri-state outputs, chainable) and D0-D7 / DS / /PL / CLK / /CE / Q7 / /Q7.
+- **Timed power supply** (Inputs and Sources → Add Timed Power Supply): e.g. 24 V that comes on after 1 s, cycles
+  on/off, or follows a trigger input with on and off delays (like a PLC timer relay).
+
+  ![MCU blinker and 24 V timed supply (Circuits → Everyday Circuits)](docs/mcu-timed-supply.png)
+
 - **MCP server (optional)** so AI assistants such as Claude Code and Claude Desktop can build and simulate
   circuits (see below). Claude Desktop launches it directly with `circuitjs.exe --mcp-stdio`, no Node.js needed.
 
@@ -148,9 +162,10 @@ The config file is `%APPDATA%\Claude\claude_desktop_config.json`, or for the Mic
 Claude Desktop connects even while CircuitJS is closed. Tool calls then return "CircuitJS is not running" until
 you start the app and turn on the MCP option.
 
-Tools: `list_examples`, `load_example`, `get_circuit`, `load_circuit`, `list_elements`,
-`simulate` (transient run with probes; returns min/max/avg/rms/frequency and a resampled waveform),
-`set_running`. Simulations requested over MCP run at full CPU speed and pause the circuit at the stop time so the
+Tools: `list_examples`, `load_example`, `get_circuit`, `load_circuit`, `edit_circuit` (change single lines),
+`list_elements`, `simulate` (transient run with probes; returns min/max/avg/rms/frequency and a resampled waveform),
+`set_running`. Answers are compact text, and `edit_circuit` returns only what changed, so an edit costs a few hundred
+tokens instead of the whole circuit twice. Full guide with a circuit-text cheat sheet: [docs/MCP.md](docs/MCP.md). Simulations requested over MCP run at full CPU speed and pause the circuit at the stop time so the
 plots stay frozen; press Run/Stop or ask the AI to resume. Keep the app window open (not minimized): Windows slows
 down hidden pages.
 

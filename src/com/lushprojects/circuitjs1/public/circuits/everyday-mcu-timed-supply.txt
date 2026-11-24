@@ -1,0 +1,22 @@
+$ 1 0.000005 10.20027730826997 50 5 50 5e-11
+436 400 304 464 304 0 \h\sLED\son\sP0\sblinks\swhile\sthe\sbutton\son\sP1\sis\snot\spressed.\n\h\sA\sknob\s(0-5\sV)\son\sP2\ssets\sthe\sspeed:\s100-1000\sms.\npullup\sP1\nloop\nif\sP1\s\q\q\s1\n\s\sP0\s\q\s1\n\s\sdelay\s100\s\p\sA2\s*\s180\n\s\sP0\s\q\s0\n\s\sdelay\s100\s\p\sA2\s*\s180\nelse\n\s\sP0\s\q\s0\nend\n
+174 224 400 224 496 0 10000 0.5 Speed
+R 224 400 224 352 0 0 40 5 0 0 0.5
+g 224 496 224 528 0 0
+s 304 336 304 400 0 1 true
+g 304 400 304 432 0 0
+437 400 560 464 560 0 0 24 1 0 1
+r 576 560 576 624 0 1000
+g 576 624 576 656 0 0
+w 240 448 368 448 0
+w 368 448 368 368 0
+w 368 368 400 368 0
+w 304 336 400 336 0
+r 400 304 352 304 0 330
+w 352 304 352 256 0
+162 352 256 448 256 2 old-default-led 1 0 0 0.01
+g 448 256 448 272 0 0
+w 496 560 576 560 0
+g 496 592 496 624 0 0
+x 208 176 563 179 4 16 MCU:\sLED\sblinks,\sbutton\sstops\sit,\sknob\ssets\sspeed
+x 208 704 428 707 4 16 Timed\ssupply:\s24\sV\son\safter\s1\ss

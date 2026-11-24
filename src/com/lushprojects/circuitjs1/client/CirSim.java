@@ -962,6 +962,7 @@ MouseOutHandler, MouseWheelHandler {
     	inputMenuBar.addItem(getClassCheckItem(LS("Add Ground"), "GroundElm"));
     	inputMenuBar.addItem(getClassCheckItem(LS("Add Voltage Source (2-terminal)"), "DCVoltageElm"));
     	inputMenuBar.addItem(getClassCheckItem(LS("Add A/C Voltage Source (2-terminal)"), "ACVoltageElm"));
+    	inputMenuBar.addItem(getClassCheckItem(LS("Add Timed Power Supply"), "TimedSupplyElm"));
     	inputMenuBar.addItem(getClassCheckItem(LS("Add Voltage Source (1-terminal)"), "RailElm"));
     	inputMenuBar.addItem(getClassCheckItem(LS("Add A/C Voltage Source (1-terminal)"), "ACRailElm"));
     	inputMenuBar.addItem(getClassCheckItem(LS("Add Square Wave Source (1-terminal)"), "SquareRailElm"));
@@ -1066,6 +1067,9 @@ MouseOutHandler, MouseWheelHandler {
     	chipMenuBar.addItem(getClassCheckItem(LS("Add Half Adder"), "HalfAdderElm"));
     	chipMenuBar.addItem(getClassCheckItem(LS("Add Custom Logic"), "UserDefinedLogicElm")); // don't change this, it will break people's saved shortcuts
     	chipMenuBar.addItem(getClassCheckItem(LS("Add Static RAM"), "SRAMElm"));
+    	chipMenuBar.addItem(getClassCheckItem(LS("Add 74HC595 (serial in, 8 outputs, latch)"), "HC595Elm"));
+    	chipMenuBar.addItem(getClassCheckItem(LS("Add 74HC165 (8 inputs, serial out)"), "HC165Elm"));
+    	chipMenuBar.addItem(getClassCheckItem(LS("Add Microcontroller (MCU)"), "McuElm"));
     	mainMenuBar.addItem(SafeHtmlUtils.fromTrustedString(CheckboxMenuItem.checkBoxHtml+LS("&nbsp;</div>Digital Chips")), chipMenuBar);
     	
     	MenuBar achipMenuBar = new MenuBar(true);
@@ -3072,7 +3076,7 @@ MouseOutHandler, MouseWheelHandler {
     	    newScope.setScopeElm(menuElm);
 	}
     	
-    	if (item.substring(0,10)=="addToScope" && menuElm != null) {
+    	if (item.startsWith("addToScope") && menuElm != null) {
     	    int n;
     	    n = Integer.parseInt(item.substring(10));
     	    if (n < scopeCount + countScopeElms()) {
@@ -5241,6 +5245,10 @@ MouseOutHandler, MouseWheelHandler {
     	case 'M': return new LogicOutputElm(x1, y1, x2, y2, f, st);
     	case 'O': return new OutputElm(x1, y1, x2, y2, f, st);
     	case 435: return new ScopeProbeElm(x1, y1, x2, y2, f, st);
+    	case 436: return new McuElm(x1, y1, x2, y2, f, st);
+    	case 437: return new TimedSupplyElm(x1, y1, x2, y2, f, st);
+    	case 438: return new HC595Elm(x1, y1, x2, y2, f, st);
+    	case 439: return new HC165Elm(x1, y1, x2, y2, f, st);
     	case 'R': return new RailElm(x1, y1, x2, y2, f, st);
     	case 'S': return new Switch2Elm(x1, y1, x2, y2, f, st);
     	case 'T': return new TransformerElm(x1, y1, x2, y2, f, st);
@@ -5535,6 +5543,14 @@ MouseOutHandler, MouseWheelHandler {
     	if (n=="UserDefinedLogicElm" || n=="CustomLogicElm")
     	    	return (CircuitElm) new CustomLogicElm(x1, y1);
     	
+    	if (n=="HC595Elm")
+    	    	return new HC595Elm(x1, y1);
+    	if (n=="HC165Elm")
+    	    	return new HC165Elm(x1, y1);
+    	if (n=="TimedSupplyElm")
+    	    	return new TimedSupplyElm(x1, y1);
+    	if (n=="McuElm")
+    	    	return new McuElm(x1, y1);
     	if (n=="TestPointElm")
     	    	return new TestPointElm(x1, y1);
     	if (n=="AmmeterElm")

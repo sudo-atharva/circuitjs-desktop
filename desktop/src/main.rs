@@ -5,7 +5,7 @@ mod mcp;
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use tauri::webview::NewWindowResponse;
-use tauri::{WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
 const SHIM: &str = concat!(include_str!("shim.js"), include_str!("mcp.js"));
 
@@ -62,6 +62,19 @@ fn toggle_devtools(w: WebviewWindow) {
     }
 }
 
+// bring a popup (e.g. the Waveform Viewer) to the front: window.focus() from the page does not
+// raise or un-minimize a separate OS window
+#[tauri::command]
+fn focus_window(app: tauri::AppHandle, title: String) {
+    for (_, w) in app.webview_windows() {
+        if w.title().map(|t| t == title).unwrap_or(false) {
+            let _ = w.unminimize();
+            let _ = w.show();
+            let _ = w.set_focus();
+        }
+    }
+}
+
 fn main() {
     if std::env::args().nth(1).as_deref() == Some("--mcp-stdio") {
         return mcp::stdio_bridge();
@@ -73,6 +86,7 @@ fn main() {
             open_file,
             startup_file,
             toggle_devtools,
+            focus_window,
             mcp::mcp_reply,
             mcp::mcp_set_enabled
         ])

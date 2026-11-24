@@ -143,8 +143,11 @@ class WaveformViewer {
 
     static native void open() /*-{
 	var w = $wnd.wvWin;
-	if (w && !w.closed) { w.focus(); return; }
+	// desktop app: raise the viewer window (also when minimized or behind the main window)
+	var raise = function () { if ($wnd.focusWindow) $wnd.focusWindow("Waveform Viewer"); };
+	if (w && !w.closed) { w.focus(); raise(); return; }
 	$wnd.wvWin = $wnd.open("waveform.html", "waveform", "width=1000,height=600");
+	setTimeout(raise, 600); // once the new page has set its title
     }-*/;
 
     static native void exportJS() /*-{

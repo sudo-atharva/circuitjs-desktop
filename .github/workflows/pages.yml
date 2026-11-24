@@ -1,0 +1,58 @@
+name: Publish web simulator + circuit gallery (GitHub Pages)
+
+# The site: index.html = everyday-circuit gallery (docs/gallery), circuitjs.html = the simulator,
+# so every gallery card opens its circuit live with circuitjs.html?startCircuit=<file>.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Compile Java to JS (GWT)
+        run: |
+          curl -sSL -o gwt.zip https://github.com/gwtproject/gwt/releases/download/2.12.2/gwt-2.12.2.zip
+          unzip -q gwt.zip
+          java -Xmx2g -cp "src:gwt-2.12.2/gwt-user.jar:gwt-2.12.2/gwt-dev.jar" \
+            com.google.gwt.dev.Compiler -war war -sourceLevel 1.8 \
+            com.lushprojects.circuitjs1.circuitjs1
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site/gallery
+          cp -r war/* _site/
+          rm -rf _site/WEB-INF _site/shortrelay.php
+          cp docs/gallery/index.html _site/index.html
+          cp docs/gallery/*.png _site/gallery/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

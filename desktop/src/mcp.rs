@@ -50,8 +50,9 @@ pub fn mcp_reply(state: tauri::State<Pending>, id: u64, ok: bool, result: String
 const INSTRUCTIONS: &str = "CircuitJS circuit simulator (the desktop app must be running). \
 Circuits use the CircuitJS text format: a '$ ...' options line, then one element per line \
 ('<type> x1 y1 x2 y2 flags params...'). Easiest workflow: list_examples / load_example a similar \
-circuit, get_circuit, edit the text, load_circuit. Element indexes (for probes) come from \
-list_elements and are 0-based. A voltage probe on a wire gives that node's voltage to ground; \
+circuit, then change it with edit_circuit (single lines, cheap) rather than get_circuit + load_circuit \
+(whole text twice). Element indexes are 0-based, as listed by list_elements / load_*. Answers are compact \
+text: '<index> <Type>: <dump line>'. In simulate, points=0 returns only the stats. Guide: docs/MCP.md. A voltage probe on a wire gives that node's voltage to ground; \
 on a part it gives the voltage across the part. simulate() resets and runs a transient analysis \
 from t=0, then returns sampled waveforms plus min/max/avg/rms/frequency.";
 
@@ -59,21 +60,29 @@ fn tools() -> Value {
     json!([
         {"name": "list_examples", "description": "List the built-in example circuits (menu path and file name).",
          "inputSchema": {"type": "object", "properties": {}}},
-        {"name": "load_example", "description": "Load a built-in example circuit by file name (from list_examples). Returns its elements.",
+        {"name": "load_example", "description": "Load a built-in example circuit by file name (from list_examples). Returns its elements, one line each.",
          "inputSchema": {"type": "object", "properties": {"file": {"type": "string"}}, "required": ["file"]}},
         {"name": "get_circuit", "description": "Get the current circuit as CircuitJS text (what a .csim file contains).",
          "inputSchema": {"type": "object", "properties": {}}},
-        {"name": "load_circuit", "description": "Replace the current circuit with CircuitJS text. Returns its elements.",
+        {"name": "load_circuit", "description": "Replace the current circuit with CircuitJS text. Returns its elements, one line each. For small changes use edit_circuit.",
          "inputSchema": {"type": "object", "properties": {"text": {"type": "string"}, "name": {"type": "string"}}, "required": ["text"]}},
-        {"name": "list_elements", "description": "List elements with index, type, dump line and live readings (voltage, current, etc.).",
-         "inputSchema": {"type": "object", "properties": {}}},
-        {"name": "simulate", "description": "Reset and run a transient simulation to stop_time seconds, recording the probes. Returns per-probe stats (min, max, avg, rms, final, frequency_hz) and a waveform resampled to `points` points.",
+        {"name": "list_elements", "description": "List elements, one line each: index, type, dump line and live readings (voltage, current, etc.).",
+         "inputSchema": {"type": "object", "properties": {
+            "indexes": {"type": "array", "items": {"type": "integer"}, "description": "only these elements (default all)"},
+            "readings": {"type": "boolean", "description": "include live readings, default true"}}}},
+        {"name": "edit_circuit", "description": "Change the current circuit line by line: replace element lines, remove elements, add new lines (elements or models). Returns only the element count and the changed/added lines. Indexes refer to the circuit before the edit; removing shifts later indexes down.",
+         "inputSchema": {"type": "object", "properties": {
+            "replace": {"type": "array", "items": {"type": "object", "properties": {
+                "index": {"type": "integer"}, "line": {"type": "string"}}, "required": ["index", "line"]}},
+            "remove": {"type": "array", "items": {"type": "integer"}},
+            "add": {"type": "array", "items": {"type": "string"}}}}},
+        {"name": "simulate", "description": "Reset and run a transient simulation to stop_time seconds, recording the probes. Returns per-probe stats (min, max, avg, rms, final, frequency_hz) and a waveform of `points` values starting at t0 in steps of dt.",
          "inputSchema": {"type": "object", "properties": {
             "stop_time": {"type": "number", "description": "seconds, e.g. 0.01"},
             "probes": {"type": "array", "items": {"type": "object", "properties": {
                 "element": {"type": "integer"},
                 "quantity": {"type": "string", "enum": ["voltage", "current"]}}, "required": ["element"]}},
-            "points": {"type": "integer", "description": "waveform points per probe, default 100, 0 = stats only"}},
+            "points": {"type": "integer", "description": "waveform points per probe, default 20, 0 = stats only"}},
           "required": ["stop_time", "probes"]}},
         {"name": "set_running", "description": "Pause or resume the live simulation.",
          "inputSchema": {"type": "object", "properties": {"running": {"type": "boolean"}}, "required": ["running"]}}

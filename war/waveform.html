@@ -27,7 +27,7 @@
   <button id="fit">Fit</button>
   <button id="csv">Export CSV</button>
   <button id="sheet" title="Datasheet-style report with schematic, these waveforms and measurements; save it as PDF">Datasheet / PDF</button>
-  <span id="help">double-click a small scope to send it here &middot; drag: zoom &middot; wheel: zoom &middot; right-drag: pan &middot; click: cursor A &middot; right-click: cursor B &middot; double-click: fit</span>
+  <span id="help">double-click a small scope to send it here &middot; drag: zoom &middot; wheel: zoom &middot; right-drag: pan &middot; click: cursor A &middot; right-click: cursor B (slope A→B in the readout) &middot; double-click: fit</span>
 </div>
 <div id="legend"></div>
 <div id="plot"><canvas id="cv"></canvas></div>
@@ -127,7 +127,11 @@ function draw() {
     out += (out ? '\n' : '') + tr.name.padEnd(14).slice(0, 14) +
       '  pp ' + fmt(m.hi - m.lo, u).padEnd(10) + ' min ' + fmt(m.lo, u).padEnd(10) + ' max ' + fmt(m.hi, u).padEnd(10) +
       ' avg ' + fmt(m.avg, u).padEnd(10) + ' rms ' + fmt(m.rms, u).padEnd(10) +
-      ' f ' + (m.freq ? fmt(m.freq, 'Hz') : '—').padEnd(10) + ' duty ' + (m.duty != null ? (m.duty * 100).toFixed(1) + '%' : '—');
+      ' f ' + (m.freq ? fmt(m.freq, 'Hz') : '—').padEnd(10) + ' duty ' + (m.duty != null ? (m.duty * 100).toFixed(1) + '%' : '—') +
+      // edges (10-90 %) on their own line so the row fits the window
+      (m.rise != null || m.fall != null ? '\n' + ''.padEnd(16) + 'rise ' + (m.rise != null ? fmt(m.rise, 's') : '—').padEnd(10) +
+        ' fall ' + (m.fall != null ? fmt(m.fall, 's') : '—').padEnd(10) +
+        (m.rise ? ' slew ' + fmt((m.hi - m.lo) * 0.8 / m.rise, u + '/s') + ' (10-90 %)' : '') : '');
   }
   if (out) out += '\n';
   if (curA !== null || curB !== null) {
@@ -139,10 +143,18 @@ function draw() {
     for (const tr of trs) {
       const a = curA !== null ? valueAt(tr, curA) : NaN, b = curB !== null ? valueAt(tr, curB) : NaN;
       out += '\n' + tr.name.padEnd(32).slice(0, 32) + '  A = ' + fmt(a, tr.unit).padEnd(12) + '  B = ' + fmt(b, tr.unit).padEnd(12) +
-             (isFinite(a) && isFinite(b) ? '  Δ = ' + fmt(b - a, tr.unit) : '');
+             (isFinite(a) && isFinite(b) ? '  Δ = ' + fmt(b - a, tr.unit).padEnd(12) +
+               (curB !== curA ? '  slope A→B = ' + fmt((b - a) / (curB - curA), tr.unit + '/s').padEnd(14) : '') : '') +
+             (curA !== null ? '  slope at A = ' + fmt(slopeAt(tr, curA), tr.unit + '/s') : '');
     }
   } else out += 'Click the plot to place cursor A, right-click for cursor B.';
   if ($('readout').textContent !== out) $('readout').textContent = out;
+}
+
+// local slope (unit/s) at x: over 1/500 of the visible time span, so it follows what the plot shows
+function slopeAt(tr, x) {
+  const h = Math.max((geo ? geo.x1 - geo.x0 : 0) / 500, 1e-12);
+  return (valueAt(tr, x + h) - valueAt(tr, x - h)) / (2 * h);
 }
 
 function loop() {

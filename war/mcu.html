@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Microcontroller (MCU)</title>
+<style>body{font-family:sans-serif;max-width:760px;margin:1em auto;line-height:1.45}pre,tt{background:#f2f2f2}pre{padding:.6em}td{padding:2px 10px 2px 0;vertical-align:top}</style>
+</head><body>
+<h1>Microcontroller (MCU)</h1>
+<p>A small programmable chip (Digital Chips &rarr; Add Microcontroller). It has 8 pins, <tt>P0</tt>&ndash;<tt>P3</tt> on the
+left and <tt>P4</tt>&ndash;<tt>P7</tt> on the right, and runs the program in its edit dialog: read buttons and sensors, drive LEDs,
+wait with <tt>delay</tt>. Hover over it to see the current line, every pin and your variables.</p>
+
+<h2>Example: blink, stop with a button, speed from a knob</h2>
+<pre># LED (with resistor) on P0, button from P1 to ground, potentiometer wiper on P2
+pullup P1
+loop
+if P1 == 1          # not pressed (the pull-up keeps it high)
+  P0 = 1
+  delay 100 + A2 * 180
+  P0 = 0
+  delay 100 + A2 * 180
+else
+  P0 = 0
+end</pre>
+
+<h2>Language</h2>
+<table>
+<tr><td><tt># text</tt>, <tt>// text</tt></td><td>comment</td></tr>
+<tr><td><tt>loop</tt></td><td>lines above it run once at start (setup), lines below repeat forever. Without <tt>loop</tt> the whole program repeats.</td></tr>
+<tr><td><tt>P0 = 1</tt></td><td>set a pin high (5 V) or low (<tt>0</tt>); this makes it an output. Any non-zero value is high.</td></tr>
+<tr><td><tt>pullup P1 P2</tt></td><td>inputs with the internal pull-up (20 k&Omega; to 5 V), for buttons to ground</td></tr>
+<tr><td><tt>delay 500</tt></td><td>wait, in milliseconds (any expression, e.g. <tt>delay A2 * 100</tt>)</td></tr>
+<tr><td><tt>x = A2 * 2</tt></td><td>variable</td></tr>
+<tr><td><tt>if</tt> &hellip; <tt>else</tt> &hellip; <tt>end</tt></td><td>condition</td></tr>
+<tr><td><tt>while</tt> &hellip; <tt>end</tt></td><td>repeat while true. A loop without <tt>delay</tt> checks once per simulation step, so <tt>while P1 == 1</tt> / <tt>end</tt> waits for a button.</td></tr>
+</table>
+<p>In expressions:</p>
+<table>
+<tr><td><tt>P3</tt></td><td>digital read: 1 above 2.5 V, else 0. An output reads back what it was set to, so <tt>P0 = not P0</tt> toggles.</td></tr>
+<tr><td><tt>A3</tt></td><td>the pin's voltage in volts (analog read)</td></tr>
+<tr><td><tt>millis</tt></td><td>simulation time in ms</td></tr>
+<tr><td>operators</td><td><tt>+ - * / %</tt>, <tt>== != &lt; &gt; &lt;= &gt;=</tt>, <tt>and or not</tt> (or <tt>&amp;&amp; || !</tt>), <tt>( )</tt></td></tr>
+</table>
+
+<h2>Timing</h2>
+<p>Like a real MCU, the program takes time: every pin write that changes a pin takes one simulation time step, so a pulse
+such as <tt>P1 = 1</tt> / <tt>P1 = 0</tt> always reaches the circuit. Everything else (math, <tt>if</tt>, reading pins)
+takes no time; a loop without <tt>delay</tt> still checks only once per time step.</p>
+
+<h2>Electrical model</h2>
+<p>5 V part. Output pins drive 0 / 5 V through about 25 &Omega; (so an LED still needs its resistor). Inputs draw almost
+nothing (100 M&Omega;). With <tt>pullup</tt> an input is pulled to 5 V through 20 k&Omega;.</p>
+<p>Errors (with the line number) show in the info box, and the chip label reads <b>MCU !</b>. Reset the simulation to run
+the program from the start.</p>
+</body></html>

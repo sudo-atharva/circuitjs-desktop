@@ -8,6 +8,11 @@ everyday-linear-regulator-5v.txt 5 V Linear Regulator (7805-style)
 everyday-555-led-blinker.txt 555 LED Blinker
 everyday-pwm-rc-filter.txt PWM to DC (RC Filter)
 everyday-opamp-noninverting.txt Op-Amp Amplifier (Gain 11)
+everyday-pnp-high-side.txt PNP High-Side Switch (12 V)
+everyday-optocoupler-24v-input.txt Optocoupler: 24 V Input to 5 V Logic
+everyday-short-protection.txt Short-Circuit Protection (Current Limit + Fuse)
+everyday-74hc165-74hc595-mcu.txt 74HC165 + 74HC595 with an MCU (8 Switches to 8 LEDs)
+everyday-mcu-timed-supply.txt MCU Blinker + 24 V Timed Supply
 -
 +Basics
 ohms.txt Ohm's Law

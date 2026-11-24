@@ -5,14 +5,77 @@
     if (!window.circuitjsApi) throw 'simulator is still loading, try again';
     return window.circuitjsApi;
   };
-  var num = function (x) { return typeof x === 'number' && isFinite(x) ? Number(x.toPrecision(6)) : null; };
+  var num = function (x) { return typeof x === 'number' && isFinite(x) ? Number(x.toPrecision(4)) : null; };
   var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
 
-  function elements() {
+  // compact text, one line per element: "3 ResistorElm: r 176 128 176 208 0 1000" (+ " | readings" if asked).
+  // Plain lines instead of JSON objects keep MCP answers small (a model reads them, every token counts).
+  // chips (3+ pins) also list their pin coordinates in pin order ("pins 64,96 64,128 ..."): wires end there.
+  function elementLine(A, i, readings) {
+    var s = i + ' ' + A.type(i) + ': ' + A.dumpLine(i), posts = A.posts ? A.posts(i) : '';
+    if (posts.split(' ').length > 2) s += ' | pins ' + posts;
+    if (readings) s += ' | ' + A.info(i).split('\n').slice(1).join('; ');
+    return s;
+  }
+
+  function elements(a) {
+    var A = api(), out = [], n = A.count();
+    var only = a && a.indexes && a.indexes.length ? a.indexes : null;
+    for (var i = 0; i < n; i++)
+      if (!only || only.indexOf(i) >= 0) out.push(elementLine(A, i, !a || a.readings !== false));
+    return n + ' elements\n' + out.join('\n');
+  }
+
+  function summary() {
     var A = api(), out = [];
-    for (var i = 0; i < A.count(); i++)
-      out.push({ index: i, type: A.type(i), dump: A.dumpLine(i), info: A.info(i).split('\n') });
-    return out;
+    for (var i = 0; i < A.count(); i++) out.push(elementLine(A, i, false));
+    return A.count() + ' elements\n' + out.join('\n');
+  }
+
+  // change single lines instead of sending the whole circuit back and forth.
+  // remove: [index], replace: [{index, line}], add: [line]. Scope ("o") and slider ("38") lines refer to
+  // element indexes: they are renumbered, and dropped when their element is removed.
+  function editCircuit(a) {
+    var A = api(), n = A.count(), lines = A.dump().split('\n'), pos = [], j = 0, i;
+    if (lines[lines.length - 1] === '') lines.pop();
+    for (i = 0; i < n; i++) {
+      var line = A.dumpLine(i);
+      while (j < lines.length && lines[j] !== line) j++;
+      if (j >= lines.length) throw 'could not find element ' + i + ' in the circuit text; use get_circuit + load_circuit';
+      pos.push(j++);
+    }
+    var check = function (k) {
+      if (!(k >= 0 && k < n && (k | 0) === k)) throw 'no element with index ' + k + ' (0-' + (n - 1) + ')';
+      return k;
+    };
+    var removed = {}, changed = [];
+    (a.replace || []).forEach(function (r) { lines[pos[check(r.index)]] = String(r.line); changed.push(r.index); });
+    (a.remove || []).forEach(function (k) { removed[check(k)] = true; });
+    var newIndex = function (k) {
+      if (removed[k]) return -1;
+      var m = k;
+      for (var x in removed) if (+x < k) m--;
+      return m;
+    };
+    var out = [], lastElement = n ? pos[n - 1] : 0, add = a.add || [];
+    for (i = 0; i < lines.length; i++) {
+      var ln = lines[i], e = pos.indexOf(i);
+      if (e >= 0 && removed[e]) continue;
+      var t = ln.split(' ');
+      if ((t[0] === 'o' || t[0] === '38') && t.length > 1 && /^\d+$/.test(t[1])) {
+        var m = newIndex(+t[1]);
+        if (m < 0) continue;
+        t[1] = m;
+        ln = t.join(' ');
+      }
+      out.push(ln);
+      if (i === lastElement) add.forEach(function (l) { out.push(String(l)); });
+    }
+    A.load(out.join('\n') + '\n', A.title() || 'MCP circuit');
+    var count = A.count(), report = [];
+    changed.forEach(function (k) { if (newIndex(k) >= 0) report.push(elementLine(A, newIndex(k), false)); });
+    for (i = Math.max(0, count - add.length); i < count; i++) report.push(elementLine(A, i, false));
+    return count + ' elements' + (report.length ? '\nchanged/added:\n' + report.join('\n') : '');
   }
 
   function examples() {
@@ -72,18 +135,16 @@
       final: num(tr.v[n - 1]), frequency_hz: num(frequency(tr, lo, hi))
     };
     if (points > 0 && n > 1) {
+      // evenly spaced: start + step instead of a time for every point (half the size)
       var t0 = tr.t[0], t1 = tr.t[n - 1];
-      r.t = []; r.v = [];
-      for (var k = 0; k < points; k++) {
-        var x = t0 + (t1 - t0) * k / (points - 1);
-        r.t.push(num(x)); r.v.push(num(valueAt(tr, x)));
-      }
+      r.t0 = num(t0); r.dt = num((t1 - t0) / (points - 1)); r.v = [];
+      for (var k = 0; k < points; k++) r.v.push(num(valueAt(tr, t0 + (t1 - t0) * k / (points - 1))));
     }
     return r;
   }
 
   async function simulate(a) {
-    var A = api(), stop = Number(a.stop_time), points = a.points == null ? 100 : Math.max(0, Math.min(2000, a.points | 0));
+    var A = api(), stop = Number(a.stop_time), points = a.points == null ? 20 : Math.max(0, Math.min(2000, a.points | 0));
     if (!(stop > 0)) throw 'stop_time must be > 0 seconds';
     var probes = a.probes || [];
     if (!probes.length) throw 'give at least one probe {element, quantity}';
@@ -116,15 +177,16 @@
       return fetch('circuitjs1/circuits/' + a.file).then(function (r) {
         if (!r.ok) throw 'no example named ' + a.file;
         return r.text();
-      }).then(function (t) { api().load(t, a.file); return elements(); });
+      }).then(function (t) { api().load(t, a.file); return summary(); });
     },
     get_circuit: function () { return api().dump(); },
     load_circuit: function (a) {
       if (!a.text) throw 'text is required';
       api().load(a.text, a.name || 'MCP circuit');
-      return elements();
+      return summary();
     },
     list_elements: elements,
+    edit_circuit: editCircuit,
     simulate: simulate,
     set_running: function (a) { api().setRunning(!!a.running); return 'ok'; }
   };

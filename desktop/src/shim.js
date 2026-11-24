@@ -37,6 +37,7 @@
     }).catch(fail);
   };
   window.toggleDevTools = function () { invoke('toggle_devtools'); };
+  window.focusWindow = function (title) { invoke('focus_window', { title: title }).catch(function () {}); };
   window.setMcpEnabled = function (b) { invoke('mcp_set_enabled', { enabled: b }).catch(fail); };
   // Ctrl+R is "rotate" in the app; F5/Ctrl+R must never reload the page (loses the circuit)
   window.addEventListener('keydown', function (e) {

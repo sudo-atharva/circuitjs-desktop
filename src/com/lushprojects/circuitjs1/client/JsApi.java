@@ -26,6 +26,25 @@ class JsApi {
 
     static String dumpLine(int i) { return elm(i).dump(); }
 
+    // frequency the small scope i shows (0 = none), for checks and MCP
+    static double scopeFreq(int i) {
+	CirSim sim = CirSim.theSim;
+	if (i < 0 || i >= sim.scopeCount || sim.scopes[i].plots.isEmpty())
+	    return -1;
+	return sim.scopes[i].plots.get(0).getFrequency();
+    }
+
+    // connection points "x,y x,y ...", so a caller can wire to a chip's pins
+    static String posts(int i) {
+	CircuitElm e = elm(i);
+	String s = "";
+	for (int k = 0; k != e.getPostCount(); k++) {
+	    Point p = e.getPost(k);
+	    s += (k > 0 ? " " : "") + p.x + "," + p.y;
+	}
+	return s;
+    }
+
     static String dump() { return CirSim.theSim.dumpCircuit(); }
 
     static void load(String text, String name) { LoadFile.doLoadCallback(text, name); }
@@ -71,6 +90,8 @@ class JsApi {
 	    type: $entry(function (i) { return @com.lushprojects.circuitjs1.client.JsApi::type(I)(i); }),
 	    info: $entry(function (i) { return @com.lushprojects.circuitjs1.client.JsApi::info(I)(i); }),
 	    dumpLine: $entry(function (i) { return @com.lushprojects.circuitjs1.client.JsApi::dumpLine(I)(i); }),
+	    scopeFreq: $entry(function (i) { return @com.lushprojects.circuitjs1.client.JsApi::scopeFreq(I)(i); }),
+	    posts: $entry(function (i) { return @com.lushprojects.circuitjs1.client.JsApi::posts(I)(i); }),
 	    dump: $entry(function () { return @com.lushprojects.circuitjs1.client.JsApi::dump()(); }),
 	    load: $entry(function (t, n) { @com.lushprojects.circuitjs1.client.JsApi::load(Ljava/lang/String;Ljava/lang/String;)(t, n); }),
 	    addProbe: $entry(function (i, k) { return @com.lushprojects.circuitjs1.client.JsApi::addProbe(II)(i, k); }),
