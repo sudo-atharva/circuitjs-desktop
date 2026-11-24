@@ -41,7 +41,7 @@ may warn the first time: click *More info → Run anyway*.
 - **Everyday Circuits** menu: LED + resistor, NPN and PNP switches, optocoupler 24 V input, short-circuit protection
   (current limit + fuse), 74HC165 + 74HC595 with an MCU, bridge rectifier, zener and 7805-style regulators,
   555 blinker, PWM filter, op-amp amplifier (also in [examples/](examples/)). Online gallery with screenshots, each
-  circuit runnable in the browser: built by `.github/workflows/pages.yml` from [docs/gallery/](docs/gallery/).
+  circuit runnable in the browser: built by `.github/workflows/pages.yml` from [docs/site/](docs/site/).
 - **Scope frequency readout fixed**: small scopes now show the frequency of slow and compressed signals too.
 - **Datasheet / PDF export** (File → Export Datasheet, or the *Datasheet / PDF* button in the Waveform Viewer):
   an A4 datasheet with title block (doc no., revision, author, optional logo), description, black-and-white

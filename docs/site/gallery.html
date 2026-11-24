@@ -3,47 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CircuitJS Desktop: everyday circuits</title>
-<style>
-  :root { color-scheme: light dark; --on-accent: #fff; --bg: #f6f7f9; --card: #fff; --text: #1d2330; --muted: #5b6475; --line: #e2e5ea; --accent: #1f6feb; }
-  @media (prefers-color-scheme: dark) { :root { --bg: #0f1115; --card: #171a21; --text: #e6e8ec; --muted: #9aa3b2; --line: #262b35; --accent: #58a6ff; --on-accent: #0d1117; } }
-  * { box-sizing: border-box; }
-  body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
-  header { max-width: 1180px; margin: 0 auto; padding: 40px 20px 8px; }
-  h1 { margin: 0 0 6px; font-size: 30px; }
-  header p { margin: 4px 0; color: var(--muted); max-width: 760px; }
-  header a { color: var(--accent); }
-  main { max-width: 1180px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
-  .card img { display: block; width: 100%; aspect-ratio: 1114 / 610; object-fit: cover; background: #000; }
-  .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
-  h2 { margin: 0; font-size: 18px; }
-  .what { margin: 0; color: var(--muted); font-size: 15px; }
-  .result { margin: 0; font-size: 14px; }
-  .result b { font-weight: 600; }
-  details { font-size: 14px; }
-  details summary { cursor: pointer; color: var(--accent); }
-  details p { margin: 6px 0 0; }
-  .links { margin-top: auto; padding-top: 8px; display: flex; gap: 10px; }
-  .links a { font-size: 14px; text-decoration: none; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); color: var(--text); }
-  .links a.open { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-  footer { max-width: 1180px; margin: 0 auto; padding: 12px 20px 40px; color: var(--muted); font-size: 14px; }
-</style>
+<title>Example circuits: CircuitJS Desktop</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-  <h1>Everyday circuits</h1>
-  <p>Small, working circuits you meet in real projects. Each one was simulated in
-  <a href="https://github.com/sudo-atharva/circuitjs-desktop">CircuitJS Desktop</a>; the result line is what the
-  simulation measured. <b>Open in browser</b> runs it live here (click switches, drag parts, double-click a graph to zoom
-  and measure slope); <b>.csim</b> downloads it for the desktop app.</p>
-  <p><b>Basics:</b> hover any part to see its voltage and current (bottom right). Double-click a part to change its
-  value. Click switches and H/L inputs to toggle them. Right-click a part &rarr; <i>View in Scope</i> for a graph;
-  double-click a graph to open the big Waveform Viewer (click = cursor A, right-click = cursor B, slope and rise time
-  in the readout). <i>Reset</i> starts the simulation again from zero.</p>
-</header>
-<main id="cards"></main>
-<footer>Based on CircuitJS1 by Paul Falstad and Iain Sharp (GPL-2.0-or-later).</footer>
+<nav><div class="in">
+  <a class="brand" href="./">CircuitJS Desktop</a>
+  <a class="here" href="gallery.html">Circuits</a>
+  <a href="guide.html">Guide &amp; tips</a>
+  <a href="https://github.com/sudo-atharva/circuitjs-desktop">GitHub</a>
+  <a class="btn" href="circuitjs.html">Open simulator</a>
+</div></nav>
+<div class="wrap">
+  <h2 style="margin-top:32px">Everyday circuits</h2>
+  <p class="muted" style="max-width:820px">Small, working circuits you meet in real projects. The <b>Simulated</b> line is what the
+  simulation measured. <b>Open in browser</b> runs the circuit live; <b>.csim</b> downloads it for the desktop app
+  (also in the app under <i>Circuits &rarr; Everyday Circuits</i>). Each card has <b>How to use</b> notes; the
+  <a href="guide.html">guide</a> covers the basics (hover for values, double-click to edit, double-click a graph to measure).</p>
+  <main class="gallery" id="cards"></main>
+  <footer>Based on CircuitJS1 by Paul Falstad and Iain Sharp (GPL-2.0-or-later).</footer>
+</div>
 <script>
   // file, title, what it shows, simulated result
   // how to use each circuit (what to click and what to watch)
@@ -68,13 +47,13 @@
     <article class="card">
       <a href="circuitjs.html?startCircuit=${file}.txt"><img src="gallery/${file}.png" alt="${esc(title)} schematic" loading="lazy"></a>
       <div class="body">
-        <h2>${esc(title)}</h2>
+        <h3>${esc(title)}</h3>
         <p class="what">${esc(what)}</p>
         <p class="result"><b>Simulated:</b> ${esc(result)}</p>
         ${how[file] ? `<details><summary>How to use</summary><p>${esc(how[file])}</p></details>` : ''}
         <div class="links">
-          <a class="open" href="circuitjs.html?startCircuit=${file}.txt">Open in browser</a>
-          <a href="circuitjs1/circuits/${file}.txt" download="${file.replace('everyday-', '')}.csim">.csim</a>
+          <a class="btn" href="circuitjs.html?startCircuit=${file}.txt">Open in browser</a>
+          <a class="btn ghost" href="circuitjs1/circuits/${file}.txt" download="${file.replace('everyday-', '')}.csim">.csim</a>
         </div>
       </div>
     </article>`).join('');

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CircuitJS Desktop: circuit simulator for Windows</title>
+<meta name="description" content="Free circuit simulator for Windows: draw a circuit, watch it run, probe it like a bench scope. MCU block, 74HC595/165, timed supplies, waveform viewer with cursors and slope, datasheet PDF export.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav><div class="in">
+  <a class="brand" href="./">CircuitJS Desktop</a>
+  <a href="gallery.html">Circuits</a>
+  <a href="guide.html">Guide &amp; tips</a>
+  <a href="https://github.com/sudo-atharva/circuitjs-desktop">GitHub</a>
+  <a class="btn" href="circuitjs.html">Open simulator</a>
+</div></nav>
+
+<div class="wrap">
+  <section class="hero">
+    <div>
+      <h1>Draw a circuit. Watch it run. Probe it like a bench.</h1>
+      <p>A free circuit simulator for Windows, based on CircuitJS1. Real-time animation, oscilloscope probes, a big
+      waveform viewer with cursors and slope, a programmable MCU, 74HC595 / 74HC165 chips, timed power supplies, and
+      datasheet-style PDF export. About 7 MB.</p>
+      <div class="ctas">
+        <a class="btn" href="https://github.com/sudo-atharva/circuitjs-desktop/releases/latest">Download for Windows</a>
+        <a class="btn ghost" href="circuitjs.html">Try it in the browser</a>
+        <a class="btn ghost" href="gallery.html">Example circuits</a>
+      </div>
+      <p class="muted" style="font-size:14px;margin-top:14px">Windows 10 / 11. Installer or portable
+      <a href="https://github.com/sudo-atharva/circuitjs-desktop/releases/latest/download/circuitjs.exe">circuitjs.exe</a>.
+      Not code-signed yet: if SmartScreen warns, click <i>More info &rarr; Run anyway</i>.</p>
+    </div>
+    <img src="gallery/everyday-74hc165-74hc595-mcu.png" alt="Switches read by a 74HC165, an MCU and a 74HC595 driving LEDs">
+  </section>
+
+  <h2>What you can do</h2>
+  <div class="features">
+    <div class="feature"><h3>Probe anything</h3><p>Press <code>h</code>, click a wire: a colored scope channel. Drag probes around while the circuit runs.</p></div>
+    <div class="feature"><h3>Measure like a scope</h3><p>Peak-to-peak, RMS, frequency, duty, rise/fall time, slew rate, and slope between two cursors.</p></div>
+    <div class="feature"><h3>Program an MCU</h3><p>An 8-pin chip that runs a small Arduino-like program: blink, read buttons and knobs, bit-bang shift registers.</p></div>
+    <div class="feature"><h3>Shift registers</h3><p>74HC595 (latch, tri-state, chainable) and 74HC165 with their real pins: 8 outputs or 8 inputs over 3 wires.</p></div>
+    <div class="feature"><h3>Timed power supply</h3><p>24 V after 1 s, on/off cycles, or a PLC-style timer relay that follows a trigger with on and off delays.</p></div>
+    <div class="feature"><h3>Everyday circuits</h3><p>Transistor switches, optocoupler inputs, short-circuit protection, regulators, 555: ready to open and change.</p></div>
+    <div class="feature"><h3>Datasheet PDF</h3><p>One click: an A4 datasheet with schematic, measured characteristics, waveforms, BOM and conditions.</p></div>
+    <div class="feature"><h3>AI control (MCP)</h3><p>Let Claude or another AI build and simulate circuits in the running app. Cheap, line-by-line edits.</p></div>
+  </div>
+
+  <h2>Screenshots</h2>
+  <div class="shots">
+    <figure><img src="img/waveform-viewer.png" alt="Waveform viewer"><figcaption>Waveform Viewer: cursors A/B, slope, rise time and live measurements</figcaption></figure>
+    <figure><img src="img/mcu-dialog.png" alt="MCU program editor"><figcaption>MCU: the program sits in the part's edit dialog; hover shows the running line and pins</figcaption></figure>
+    <figure><img src="img/circuit-probes.png" alt="Circuit with probes"><figcaption>Oscilloscope probes on any wire, each a colored channel</figcaption></figure>
+    <figure><img src="img/datasheet.png" alt="Datasheet editor"><figcaption>Datasheet / PDF export with editable texts</figcaption></figure>
+    <figure><img src="gallery/everyday-short-protection.png" alt="Short-circuit protection"><figcaption>Short-circuit protection: current limit and fuse, each with a "short" switch</figcaption></figure>
+    <figure><img src="gallery/everyday-optocoupler-24v-input.png" alt="Optocoupler input"><figcaption>24 V PLC-style input through an optocoupler to 5 V logic</figcaption></figure>
+  </div>
+
+  <h2>Get started in a minute</h2>
+  <div class="features">
+    <div class="feature"><h3>1. Open an example</h3><p><i>Circuits &rarr; Everyday Circuits</i>, or browse the <a href="gallery.html">gallery</a>. It starts running at once.</p></div>
+    <div class="feature"><h3>2. Hover and click</h3><p>Hover a part for its voltage and current; click switches; double-click a part to change its value.</p></div>
+    <div class="feature"><h3>3. Look at the signal</h3><p>Press <code>h</code> and click a wire, or double-click a small graph: the Waveform Viewer opens with cursors.</p></div>
+    <div class="feature"><h3>4. Build your own</h3><p><i>Draw</i> menu or a key (<code>r</code> resistor, <code>w</code> wire, <code>g</code> ground...), then drag. More in the <a href="guide.html">guide</a>.</p></div>
+  </div>
+
+  <footer>CircuitJS Desktop by <a href="https://github.com/sudo-atharva">sudo-atharva</a>, based on
+  <a href="https://github.com/sharpie7/circuitjs1">CircuitJS1</a> by Paul Falstad and Iain Sharp. GPL-2.0-or-later.</footer>
+</div>
+</body>
+</html>

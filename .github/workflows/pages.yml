@@ -1,7 +1,8 @@
 name: Publish web simulator + circuit gallery (GitHub Pages)
 
-# The site: index.html = everyday-circuit gallery (docs/gallery), circuitjs.html = the simulator,
-# so every gallery card opens its circuit live with circuitjs.html?startCircuit=<file>.
+# The site (docs/site): index.html = home, gallery.html = everyday circuits (screenshots in docs/gallery),
+# guide.html = guide & tips, circuitjs.html = the simulator; gallery cards open circuits live with
+# circuitjs.html?startCircuit=<file>. Images for the pages: docs/*.png -> img/.
 on:
   push:
     branches: [main]
@@ -40,8 +41,10 @@ jobs:
           mkdir -p _site/gallery
           cp -r war/* _site/
           rm -rf _site/WEB-INF _site/shortrelay.php
-          cp docs/gallery/index.html _site/index.html
+          mkdir -p _site/img
+          cp docs/site/* _site/
           cp docs/gallery/*.png _site/gallery/
+          cp docs/*.png _site/img/
 
       - uses: actions/upload-pages-artifact@v3
         with:

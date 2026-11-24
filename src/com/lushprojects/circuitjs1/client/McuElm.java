@@ -136,8 +136,10 @@ public class McuElm extends ChipElm {
 	if (n == 2) {
 	    EditInfo ei = new EditInfo(EditInfo.makeLink("mcu.html", "Program"), 0, -1, -1);
 	    ei.textArea = new TextArea();
-	    ei.textArea.setVisibleLines(14);
-	    ei.textArea.setCharacterWidth(40);
+	    ei.textArea.setVisibleLines(16);
+	    ei.textArea.setCharacterWidth(56);
+	    ei.textArea.getElement().getStyle().setProperty("fontFamily", "Consolas, monospace");
+	    ei.textArea.getElement().getStyle().setProperty("whiteSpace", "pre");
 	    ei.textArea.setText(source);
 	    return ei;
 	}

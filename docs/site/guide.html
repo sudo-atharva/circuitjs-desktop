@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guide &amp; tips: CircuitJS Desktop</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav><div class="in">
+  <a class="brand" href="./">CircuitJS Desktop</a>
+  <a href="gallery.html">Circuits</a>
+  <a class="here" href="guide.html">Guide &amp; tips</a>
+  <a href="https://github.com/sudo-atharva/circuitjs-desktop">GitHub</a>
+  <a class="btn" href="circuitjs.html">Open simulator</a>
+</div></nav>
+
+<div class="wrap doc">
+<aside>
+  <a href="#basics">Basics</a>
+  <a href="#draw">Drawing a circuit</a>
+  <a href="#values">Values and units</a>
+  <a href="#measure">Measuring</a>
+  <a href="#viewer">Waveform Viewer</a>
+  <a href="#mcu">MCU block</a>
+  <a href="#supply">Timed power supply</a>
+  <a href="#shift">74HC595 / 74HC165</a>
+  <a href="#practical">Practical circuit tips</a>
+  <a href="#sim">Simulation tips</a>
+  <a href="#files">Files and PDF</a>
+  <a href="#keys">Keyboard shortcuts</a>
+  <a href="#ai">AI control (MCP)</a>
+  <a href="#trouble">Troubleshooting</a>
+</aside>
+<article>
+<h1>Guide &amp; tips</h1>
+<p class="muted">Everything here works the same in the desktop app and in the <a href="circuitjs.html">browser version</a>
+(except files, PDF and MCP, which are desktop only).</p>
+
+<h2 id="basics">Basics</h2>
+<p>The circuit runs all the time, like a real board on the bench. Yellow dots show current flowing; wire colors show
+voltage (green positive, red negative, gray 0 V).</p>
+<table>
+<tr><th>To</th><th>Do</th></tr>
+<tr><td>See a part's voltage and current</td><td>Hover it: the values appear bottom right.</td></tr>
+<tr><td>Change a value</td><td>Double-click the part (or mouse wheel over it).</td></tr>
+<tr><td>Flip a switch / H-L input</td><td>Click it.</td></tr>
+<tr><td>More options</td><td>Right-click the part: edit, rotate, view in scope, plot in the Waveform Viewer, delete.</td></tr>
+<tr><td>Start over from 0 s</td><td><i>Reset</i> (top right). <i>RUN / Stop</i> pauses.</td></tr>
+<tr><td>Slow down or speed up</td><td><i>Simulation Speed</i> slider. It changes how fast the simulation runs on screen, not the results.</td></tr>
+</table>
+
+<h2 id="draw">Drawing a circuit</h2>
+<ol>
+<li>Pick a part in the <i>Draw</i> menu, or press its key (<code>r</code> resistor, <code>w</code> wire...).</li>
+<li>Drag on the canvas from one end to the other. Ends snap to the grid.</li>
+<li>Wires connect where their <b>end points</b> meet another end point or a pin. Two wires crossing in the middle are not connected.</li>
+<li>Every circuit needs a ground (<code>g</code>) or a source with a ground reference.</li>
+</ol>
+<div class="tip"><b>Tip:</b> drag a part's end dot to move only that end. <code>Ctrl+R</code> rotates, <code>Ctrl+D</code> duplicates.
+Ctrl+click a wire to split it.</div>
+
+<h2 id="values">Values and units</h2>
+<p>Type values with SI prefixes: <code>4.7k</code>, <code>100n</code>, <code>2.2u</code> (µ), <code>1M</code> (mega), <code>10m</code> (milli).
+Times in the Waveform Viewer work the same: <code>500u</code> = 500 µs.</p>
+<div class="tip"><b>Tip:</b> <code>m</code> is milli and <code>M</code> is mega. A 1m resistor is 0.001 Ω.</div>
+
+<h2 id="measure">Measuring</h2>
+<h3>Probes (best way)</h3>
+<p>Press <code>h</code>, click a wire, drag the handle out. Each probe is a colored channel (CH1 yellow, CH2 cyan...)
+in the Waveform Viewer. A probe on a wire measures that node to ground. Drag it anywhere, even while running.
+A hollow tip with <code>?</code> means it is not touching anything.</p>
+<h3>Small scopes</h3>
+<p>Right-click a part &rarr; <i>View in Scope</i> puts a small graph at the bottom. It shows max, min and frequency.
+Right-click the graph for its options (stack, combine, properties).</p>
+<h3>Frequency</h3>
+<p>The small scopes and the viewer time the rising edges over many periods, so square waves read correctly even
+when edges fall between time steps (1 to 60 kHz within 0.3 % at the default 5 µs step). Above about
+1 / (3.3 &times; time step) there are too few samples per cycle: lower the time step in <i>Options &rarr; Other Options</i>.</p>
+
+<h2 id="viewer">Waveform Viewer</h2>
+<p>Opens when you add a probe, or double-click a small graph (or right-click it &rarr; <i>Open in Waveform Viewer</i>).</p>
+<img src="img/waveform-viewer.png" alt="Waveform Viewer with cursors and measurements">
+<table>
+<tr><th>Action</th><th>Result</th></tr>
+<tr><td>Drag on the plot</td><td>Zoom into that time range</td></tr>
+<tr><td>Mouse wheel / right-drag</td><td>Zoom / pan</td></tr>
+<tr><td>Double-click</td><td>Fit everything</td></tr>
+<tr><td>Click / right-click</td><td>Cursor A / cursor B</td></tr>
+<tr><td><i>Show last</i> <code>20m</code></td><td>Scope-style timebase: the last 20 ms, scrolling</td></tr>
+<tr><td><i>Run for</i> <code>10m</code> &rarr; Run</td><td>Reset and run exactly 10 ms, then stop (a transient analysis)</td></tr>
+</table>
+<p>The readout under the plot, per trace: peak-to-peak, min, max, average, RMS, frequency, duty, and on a second line
+<b>rise / fall time</b> (10-90 %) and <b>slew rate</b>. With cursors: the value at A and B, the difference,
+<b>slope A&rarr;B</b> and the <b>slope at A</b> (V/s or A/s).</p>
+<div class="tip"><b>Tip:</b> to measure a slope, zoom to the edge first: the slope at a cursor is taken over 1/500 of the
+visible time span.</div>
+
+<h2 id="mcu">MCU block</h2>
+<p><i>Draw &rarr; Digital Chips &rarr; Add Microcontroller (MCU)</i>. 8 pins: P0-P3 on the left, P4-P7 on the right.
+Double-click it to edit the program; hover it to see the running line, every pin and your variables.</p>
+<img src="img/mcu-dialog.png" alt="MCU program in the edit dialog">
+<pre># LED on P0 blinks while the button on P1 is not pressed,
+# a knob on P2 sets the speed
+pullup P1           # button to ground, internal pull-up
+loop                # lines above run once, lines below forever
+if P1 == 1
+  P0 = 1
+  delay 100 + A2 * 180   # A2 = voltage on P2 (0-5 V)
+  P0 = 0
+  delay 100 + A2 * 180
+else
+  P0 = 0
+end</pre>
+<table>
+<tr><th>Write</th><th>Meaning</th></tr>
+<tr><td><code>P0 = 1</code></td><td>pin high (5 V); makes it an output. <code>P0 = not P0</code> toggles.</td></tr>
+<tr><td><code>pullup P1</code></td><td>input with a 20 kΩ pull-up</td></tr>
+<tr><td><code>P3</code> / <code>A3</code></td><td>read: 1/0 (above/below 2.5 V) / the voltage</td></tr>
+<tr><td><code>delay 500</code></td><td>wait 500 ms (any expression)</td></tr>
+<tr><td><code>x = x + 1</code></td><td>variables</td></tr>
+<tr><td><code>if</code> / <code>else</code> / <code>end</code>, <code>while</code> / <code>end</code></td><td>blocks</td></tr>
+<tr><td><code>millis</code></td><td>simulation time in ms</td></tr>
+<tr><td>operators</td><td><code>+ - * / %</code>, <code>== != &lt; &gt; &lt;= &gt;=</code>, <code>and or not</code></td></tr>
+</table>
+<div class="tip"><b>Tips:</b>
+outputs drive through about 25 Ω, so LEDs still need a resistor.
+Each pin change takes one time step, so <code>P1 = 1</code> then <code>P1 = 0</code> is a real (5 µs) clock pulse.
+A <code>while</code> loop without <code>delay</code> checks once per time step, so <code>while P1 == 1</code> / <code>end</code> waits for a button.
+An error shows its line number in the hover info and the chip reads <b>MCU !</b>.</div>
+
+<h2 id="supply">Timed power supply</h2>
+<p><i>Draw &rarr; Inputs and Sources &rarr; Add Timed Power Supply</i>. Pins: TRIG (left), + and - (right). Double-click to
+set the voltage, the mode and the times.</p>
+<table>
+<tr><th>Mode</th><th>Behavior</th><th>Example</th></tr>
+<tr><td>Delay on</td><td>off until <i>delay</i>, then on (for <i>on time</i>, 0 = stays on)</td><td>24 V after 1 s</td></tr>
+<tr><td>Cycle on/off</td><td>after <i>delay</i>: on for <i>on time</i>, off for <i>off time</i>, repeat</td><td>2 s on, 3 s off</td></tr>
+<tr><td>Trigger (follow)</td><td>on <i>delay</i> after TRIG goes high, off <i>off delay</i> after it drops</td><td>a PLC TON/TOF timer relay</td></tr>
+<tr><td>Trigger (pulse)</td><td>each rising TRIG edge: wait <i>delay</i>, then on for <i>on time</i></td><td>one-shot</td></tr>
+</table>
+<p>TRIG is high above 2.5 V (to ground) and draws no current. Drive it from a switch, an MCU pin or a logic input.</p>
+
+<h2 id="shift">74HC595 / 74HC165</h2>
+<table>
+<tr><th>74HC595 pin</th><th>Datasheet names</th><th>Use</th></tr>
+<tr><td>SER</td><td>SER, DS</td><td>serial data in</td></tr>
+<tr><td>SCK</td><td>SRCLK, SHCP</td><td>rising edge shifts SER in</td></tr>
+<tr><td>RCK</td><td>RCLK, STCP</td><td>rising edge copies the shift register to Q0-Q7</td></tr>
+<tr><td>/CLR</td><td>/SRCLR, /MR</td><td>low clears; tie to 5 V</td></tr>
+<tr><td>/OE</td><td>/OE</td><td>low = outputs on; tie to ground</td></tr>
+<tr><td>Q7'</td><td>QH', Q7S</td><td>to the next 595's SER (chaining)</td></tr>
+</table>
+<table>
+<tr><th>74HC165 pin</th><th>Datasheet names</th><th>Use</th></tr>
+<tr><td>D0-D7</td><td>A-H</td><td>parallel inputs (buttons, switches)</td></tr>
+<tr><td>/PL</td><td>SH/LD</td><td>low loads D0-D7</td></tr>
+<tr><td>CLK, /CE</td><td>CLK, CLK INH</td><td>rising CLK shifts (when /CE is low)</td></tr>
+<tr><td>Q7, /Q7</td><td>QH</td><td>serial out: D7 first</td></tr>
+<tr><td>DS</td><td>SER</td><td>from the next 165's Q7 (chaining); ground it if unused</td></tr>
+</table>
+<p>Read 8 inputs: pulse /PL low, then 8 times: read Q7, pulse CLK. Write 8 outputs: 8 times: set SER, pulse SCK; then
+pulse RCK. The <a href="circuitjs.html?startCircuit=everyday-74hc165-74hc595-mcu.txt">165 + 595 example</a> does both.</p>
+
+<h2 id="practical">Practical circuit tips</h2>
+<ul>
+<li><b>LED resistor:</b> R = (supply - LED voltage) / current. 5 V red LED at 10 mA: (5 - 2) / 0.01 = 300 Ω, use 330 Ω.</li>
+<li><b>Transistor as a switch:</b> give it about 1/10 of the load current as base current so it saturates. Hover it: it should say
+<i>saturation</i> and Vce well under 0.3 V. In <i>fwd active</i> it heats up.</li>
+<li><b>PNP high side:</b> the base needs to go down to near the emitter supply minus 0.7 V; a 10 kΩ base-emitter resistor keeps it off.
+To switch it from 5 V logic when the load is 12 V, use an NPN to pull the base down (see the PNP example).</li>
+<li><b>Optocoupler inputs:</b> 24 V inputs usually use 3.3-4.7 kΩ (about 5 mA). The output side inverts with a pull-up:
+LOW = input on.</li>
+<li><b>Short-circuit protection:</b> a fuse cuts off; a current limiter (sense resistor + second transistor) holds the current at
+0.65 V / R<sub>sense</sub> but the transistor then takes the whole supply voltage: check its power (P in the hover info).</li>
+<li><b>Logic inputs</b> should never float: tie unused inputs to 5 V or ground (a floating input reads 0 V here, but not on a real board).</li>
+</ul>
+
+<h2 id="sim">Simulation tips</h2>
+<ul>
+<li><b>Time step</b> (<i>Options &rarr; Other Options</i>): default 5 µs. Use 20+ samples per cycle for waveforms whose shape matters
+(about 10 kHz at 5 µs). Smaller steps run slower.</li>
+<li>Slow circuits (seconds) at a small time step take long: raise the time step, or use <i>Run for</i> in the viewer, which runs at full CPU speed.</li>
+<li>Ideal parts can make impossible circuits: two voltage sources in parallel, or a source shorted by a wire, give an error.
+Add a small resistance.</li>
+<li>Use <i>Edit &rarr; Undo</i> (<code>Ctrl+Z</code>) freely: every change can be undone.</li>
+</ul>
+
+<h2 id="files">Files and PDF</h2>
+<ul>
+<li><i>File &rarr; Save</i> writes a <code>.csim</code> file (plain text). Double-click a <code>.csim</code> to open it (installer version).</li>
+<li><i>File &rarr; Export Datasheet (PDF)</i>: an editable A4 datasheet; <i>Save as PDF / Print</i> &rarr; Microsoft Print to PDF.
+Put probes on the nodes you care about first: they become the measured characteristics and waveform figures.</li>
+<li><i>Export CSV</i> in the Waveform Viewer saves the traces for Excel or Python.</li>
+</ul>
+
+<h2 id="keys">Keyboard shortcuts</h2>
+<table>
+<tr><td><code>Ctrl+R</code></td><td>rotate</td><td><code>Ctrl+Z</code> / <code>Ctrl+Y</code></td><td>undo / redo</td></tr>
+<tr><td><code>Ctrl+D</code></td><td>duplicate</td><td><code>Ctrl+X / C / V</code></td><td>cut / copy / paste</td></tr>
+<tr><td><code>Delete</code></td><td>delete</td><td><code>Space</code> / <code>Esc</code></td><td>back to select</td></tr>
+<tr><td><code>+</code> <code>-</code> <code>0</code></td><td>zoom</td><td><code>?</code></td><td>shortcut list in the app</td></tr>
+<tr><td><code>w</code></td><td>wire</td><td><code>r</code></td><td>resistor</td></tr>
+<tr><td><code>c</code> / <code>C</code></td><td>capacitor / polarized</td><td><code>L</code></td><td>inductor</td></tr>
+<tr><td><code>d</code> / <code>z</code> / <code>l</code></td><td>diode / zener / LED</td><td><code>n</code> / <code>p</code></td><td>NPN / PNP</td></tr>
+<tr><td><code>N</code> / <code>P</code></td><td>N / P MOSFET</td><td><code>s</code> / <code>S</code></td><td>switch / SPDT</td></tr>
+<tr><td><code>g</code></td><td>ground</td><td><code>v</code> / <code>V</code></td><td>source 2-terminal / 1-terminal</td></tr>
+<tr><td><code>i</code> / <code>o</code></td><td>logic input / output</td><td><code>a</code></td><td>op-amp</td></tr>
+<tr><td><code>R</code> / <code>T</code></td><td>relay / transformer</td><td><code>h</code></td><td>scope probe</td></tr>
+<tr><td><code>t</code></td><td>text</td><td><code>1 2 3 4 @ #</code></td><td>NOT AND OR XOR NAND NOR</td></tr>
+</table>
+
+<h2 id="ai">AI control (MCP)</h2>
+<p>Desktop app: <i>Options &rarr; Enable MCP Server</i>. Then, in Claude Code:</p>
+<pre>claude mcp add --transport http --scope user circuitjs http://127.0.0.1:7432/mcp</pre>
+<p>Ask things like <i>"build a 555 at 1 kHz and check the duty cycle"</i>. The AI edits single lines (<code>edit_circuit</code>) so a
+change costs a few hundred tokens. Full guide: <a href="https://github.com/sudo-atharva/circuitjs-desktop/blob/main/docs/MCP.md">docs/MCP.md</a>.</p>
+
+<h2 id="trouble">Troubleshooting</h2>
+<table>
+<tr><th>Problem</th><th>Fix</th></tr>
+<tr><td>Nothing happens, the time does not move</td><td>Press <i>RUN / Stop</i>; check for an error message at the bottom.</td></tr>
+<tr><td>"Singular matrix" / "no path to ground"</td><td>A node has nothing connecting it to the rest: add a ground, or a high resistor (1 MΩ) to ground.</td></tr>
+<tr><td>A part does not connect</td><td>Wires only join at end points: drag the end onto the pin until it snaps.</td></tr>
+<tr><td>No frequency shown</td><td>The signal needs 2-3 full periods with the same timing; for fast signals lower the time step.</td></tr>
+<tr><td>Waveform Viewer not visible</td><td>Double-click a small graph again: the window comes to the front.</td></tr>
+<tr><td>SmartScreen blocks the download</td><td><i>More info &rarr; Run anyway</i> (the app is not code-signed yet).</td></tr>
+</table>
+</article>
+</div>
+<div class="wrap"><footer>CircuitJS Desktop, based on CircuitJS1 by Paul Falstad and Iain Sharp. GPL-2.0-or-later.</footer></div>
+</body>
+</html>
